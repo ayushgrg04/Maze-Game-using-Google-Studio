@@ -1,4 +1,5 @@
 
+
 export type Player = {
   id: 1 | 2;
   name: string;
@@ -66,3 +67,10 @@ export type OnlineGameData = {
     turnTime: number;
     // status: 'waiting' | 'active' | 'finished';
 };
+
+// Represents an action that can be taken in an online game
+export type OnlineGameAction =
+  | { type: 'MOVE'; to: Position }
+  | { type: 'PLACE_WALL'; wall: Omit<Wall, 'playerId'> }
+  | { type: 'TIMEOUT' }
+  | { type: 'FORFEIT' };

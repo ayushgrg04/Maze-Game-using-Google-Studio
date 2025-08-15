@@ -1,18 +1,15 @@
 
 
+
+
 import { useState, useCallback, useEffect } from 'react';
 import { BOARD_SIZE } from '../constants';
 import getAiMove from '../services/geminiService';
 import getLocalAiMove from '../services/localAiService';
 import { onlineService } from '../services/onlineService';
 import { findShortestPath, getPossibleMoves } from '../utils/pathfinding';
-import type { Player, Position, Wall, AiAction, OnlineGameData } from '../types';
+import type { Player, Position, Wall, AiAction, OnlineGameData, OnlineGameAction } from '../types';
 import { GameState, GameMode, Difficulty, AiType, StartPosition } from '../types';
-
-type GameAction = 
-    | { type: 'MOVE', to: { r: number, c: number } }
-    | { type: 'PLACE_WALL', wall: Omit<Wall, 'playerId'> }
-    | { type: 'TIMEOUT' };
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -44,7 +41,7 @@ const useGameLogic = () => {
   const [initialWalls, setInitialWalls] = useState(10);
 
 
-  const resetGameState = useCallback(() => {
+  const resetGameState = useCallback((isForfeit: boolean = false) => {
     setWalls([]);
     setCurrentPlayerId(1);
     setWinner(null);
@@ -58,16 +55,61 @@ const useGameLogic = () => {
     
     if(onlineRequestTimeout) clearTimeout(onlineRequestTimeout);
     setOnlineRequestTimeout(null);
-    if(onlineGameId) onlineService.leaveGame(onlineGameId);
+
+    if(onlineGameId && !isForfeit) {
+        onlineService.leaveGame(onlineGameId);
+    }
     setOnlineGameId(null);
     setOnlinePlayerId(null);
 
   }, [configuredTurnTime, onlineGameId, onlineRequestTimeout]);
   
+  const applyActionToState = useCallback((state: OnlineGameData, action: OnlineGameAction, actionByPlayerId: 1 | 2): OnlineGameData => {
+    const newState = JSON.parse(JSON.stringify(state)); // Deep clone
+    if (newState.winner) return state; // If game is already won, no more actions
+    if (action.type !== 'TIMEOUT' && action.type !== 'FORFEIT' && actionByPlayerId !== newState.currentPlayerId) return state; // Not your turn
+
+    const { players, walls } = newState;
+    switch(action.type) {
+        case 'MOVE':
+            players[actionByPlayerId].position = action.to;
+            if (action.to.r === players[actionByPlayerId].goalRow) {
+                newState.winner = players[actionByPlayerId];
+            }
+            break;
+        case 'PLACE_WALL':
+            const newWall: Wall = { ...action.wall, playerId: actionByPlayerId };
+            walls.push(newWall);
+            players[actionByPlayerId].wallsLeft--;
+            break;
+        case 'TIMEOUT':
+        case 'FORFEIT':
+            newState.winner = players[actionByPlayerId === 1 ? 2 : 1];
+            break;
+    }
+
+    if (!newState.winner) {
+        newState.currentPlayerId = actionByPlayerId === 1 ? 2 : 1;
+    }
+    newState.turnTime = configuredTurnTime;
+    return newState;
+  }, [configuredTurnTime]);
+
   const returnToMenu = useCallback(() => {
-    setGameState(GameState.MENU);
-    resetGameState();
-  }, [resetGameState]);
+    if (gameState === GameState.PLAYING && gameMode === GameMode.PVO && onlineGameId && onlinePlayerId && !winner) {
+        // Handle Forfeit
+        const currentState: OnlineGameData = { players, walls, currentPlayerId, winner, gameTime, turnTime };
+        const forfeitState = applyActionToState(currentState, { type: 'FORFEIT' }, onlinePlayerId);
+        // Publish the final "forfeit" state and then clear the game from the server
+        onlineService.leaveGame(onlineGameId, forfeitState);
+        setGameState(GameState.MENU);
+        resetGameState(true); // 'true' prevents resetGameState from calling leaveGame again
+    } else {
+        // Handle normal return to menu or game over
+        setGameState(GameState.MENU);
+        resetGameState(false);
+    }
+  }, [resetGameState, gameState, gameMode, onlineGameId, onlinePlayerId, winner, players, walls, currentPlayerId, gameTime, turnTime, applyActionToState]);
 
   const initializeLocalGame = useCallback((mode: GameMode, p1Name: string = 'Player 1', selectedAiType: AiType, selectedDifficulty: Difficulty, duration: number, startPos: StartPosition, wallsCount: number) => {
     resetGameState();
@@ -132,35 +174,6 @@ const useGameLogic = () => {
     const valid = getPossibleMoves(pos, walls, opponentPos);
     setValidMoves(valid);
   }, [players, walls, currentPlayerId]);
-
-  const applyActionToState = (state: OnlineGameData, action: GameAction, actionByPlayerId: 1 | 2): OnlineGameData => {
-    const newState = JSON.parse(JSON.stringify(state)); // Deep clone
-    if (newState.winner || actionByPlayerId !== newState.currentPlayerId) return state;
-
-    const { players, walls } = newState;
-    switch(action.type) {
-        case 'MOVE':
-            players[actionByPlayerId].position = action.to;
-            if (action.to.r === players[actionByPlayerId].goalRow) {
-                newState.winner = players[actionByPlayerId];
-            }
-            break;
-        case 'PLACE_WALL':
-            const newWall: Wall = { ...action.wall, playerId: actionByPlayerId };
-            walls.push(newWall);
-            players[actionByPlayerId].wallsLeft--;
-            break;
-        case 'TIMEOUT':
-            newState.winner = players[actionByPlayerId === 1 ? 2 : 1];
-            break;
-    }
-
-    if (!newState.winner) {
-        newState.currentPlayerId = actionByPlayerId === 1 ? 2 : 1;
-    }
-    newState.turnTime = configuredTurnTime;
-    return newState;
-  };
   
   const handleMove = useCallback((to: Position, from?: Position) => {
     const fromPos = from || selectedPiece;
@@ -174,6 +187,7 @@ const useGameLogic = () => {
         if (gameMode === GameMode.PVO && onlineGameId && onlinePlayerId) {
             const currentState: OnlineGameData = { players, walls, currentPlayerId, winner, gameTime, turnTime };
             const nextState = applyActionToState(currentState, { type: 'MOVE', to }, onlinePlayerId);
+            updateStateFromOnline(nextState); // Optimistic local update
             onlineService.publishGameState(onlineGameId, nextState);
         } else {
             const updatedPlayers = { ...players };
@@ -208,6 +222,7 @@ const useGameLogic = () => {
     if(gameMode === GameMode.PVO && onlineGameId && onlinePlayerId) {
         const currentState: OnlineGameData = { players, walls, currentPlayerId, winner, gameTime, turnTime };
         const nextState = applyActionToState(currentState, { type: 'PLACE_WALL', wall }, onlinePlayerId);
+        updateStateFromOnline(nextState); // Optimistic local update
         onlineService.publishGameState(onlineGameId, nextState);
     } else {
       setWalls(prev => [...prev, newWall]);
@@ -230,8 +245,8 @@ const useGameLogic = () => {
       
       const gameHasStarted = data.players && data.players[1] && data.players[2];
       
-      if(gameHasStarted && players[1]){
-          setInitialWalls(players[1].wallsLeft);
+      if(gameHasStarted && data.players[1] && typeof data.players[1].wallsLeft === 'number'){
+          setInitialWalls(data.players[1].wallsLeft);
       }
 
       if (gameHasStarted) {
@@ -243,10 +258,12 @@ const useGameLogic = () => {
 
       if (data.winner) {
           setGameState(GameState.GAME_OVER);
-      } else if (gameHasStarted && gameState !== GameState.PLAYING) {
-          setGameState(GameState.PLAYING);
+      } else if (gameHasStarted) {
+          setGameState(currentGameState => 
+              currentGameState === GameState.ONLINE_WAITING ? GameState.PLAYING : currentGameState
+          );
       }
-  }, [gameState, onlineRequestTimeout, players]);
+  }, [onlineRequestTimeout]);
 
   useEffect(() => {
       if (onlineGameId) {
@@ -388,29 +405,23 @@ const useGameLogic = () => {
         }
         
         // --- Robust Fallback Logic ---
-        // This block ensures the AI's turn always ends, preventing a timeout loop.
         const aiPlayer = players[2];
         const humanPlayer = players[1];
-
         const possibleMoves = getPossibleMoves(aiPlayer.position, walls, humanPlayer.position);
 
         if (possibleMoves.length > 0) {
             const fallbackPath = findShortestPath(aiPlayer.position, aiPlayer.goalRow, walls, humanPlayer.position);
-            let moveToMake = possibleMoves[0]; // Default to the first available move
+            let moveToMake = possibleMoves[0]; 
 
             if (fallbackPath && fallbackPath.length > 1) {
                 const bestStep = fallbackPath[1];
-                const isBestStepValid = possibleMoves.some(m => m.r === bestStep.r && m.c === bestStep.c);
-                if (isBestStepValid) {
+                if (possibleMoves.some(m => m.r === bestStep.r && m.c === bestStep.c)) {
                     moveToMake = bestStep;
                 }
             }
-            
-            // Perform the move directly instead of calling handleMove, to bypass any validation issues.
             const updatedPlayers = { ...players };
             updatedPlayers[2].position = moveToMake;
             setPlayers(updatedPlayers);
-            
             if (moveToMake.r === aiPlayer.goalRow) {
                 setWinner(aiPlayer);
                 setGameState(GameState.GAME_OVER);
@@ -418,7 +429,6 @@ const useGameLogic = () => {
                 switchTurn();
             }
         } else {
-            // No moves possible, AI must pass.
             switchTurn();
         }
     } finally {
@@ -440,36 +450,64 @@ const useGameLogic = () => {
       }, 1000);
     }
     return () => clearInterval(gameInterval);
-  }, [gameState, onlinePlayerId]);
+  }, [gameState]);
 
   useEffect(() => {
     let turnInterval: number | undefined;
-    if (gameState === GameState.PLAYING && (gameMode !== GameMode.PVO || currentPlayerId === onlinePlayerId)) {
+    if (gameState === GameState.PLAYING) {
       turnInterval = window.setInterval(() => {
         setTurnTime(prev => (prev <= 1 ? 0 : prev - 1));
       }, 1000);
     }
     return () => clearInterval(turnInterval);
-  }, [gameState, currentPlayerId, gameMode, onlinePlayerId]);
+  }, [gameState, currentPlayerId]);
 
   useEffect(() => {
-    if (gameState === GameState.PLAYING && turnTime === 0 && onlineGameId && onlinePlayerId && currentPlayerId === onlinePlayerId) {
-        const currentState: OnlineGameData = { players, walls, currentPlayerId, winner, gameTime, turnTime };
-        const nextState = applyActionToState(currentState, { type: 'TIMEOUT' }, onlinePlayerId);
-        onlineService.publishGameState(onlineGameId, nextState);
-    } else if (gameState === GameState.PLAYING && turnTime === 0 && gameMode !== GameMode.PVO) {
+    if (turnTime > 0 || gameState !== GameState.PLAYING || winner) return;
+
+    if (gameMode === GameMode.PVO) {
+        if (onlineGameId && onlinePlayerId) {
+            // Whoever's turn it is when the timer hits zero, that player loses.
+            const losingPlayerId = currentPlayerId;
+            const currentState: OnlineGameData = { players, walls, currentPlayerId, winner, gameTime, turnTime: 0 };
+            const nextState = applyActionToState(currentState, { type: 'TIMEOUT' }, losingPlayerId);
+            
+            // We update locally and publish the result regardless of whose turn it was.
+            // This prevents desync if one player disconnects.
+            updateStateFromOnline(nextState);
+            onlineService.publishGameState(onlineGameId, nextState);
+        }
+    } else {
         setWinner(players[currentPlayerId === 1 ? 2 : 1]);
         setGameState(GameState.GAME_OVER);
     }
-  }, [turnTime, gameState, players, currentPlayerId, gameMode, onlinePlayerId, onlineGameId, winner, gameTime, walls, configuredTurnTime, applyActionToState]);
+  }, [turnTime, gameState, players, currentPlayerId, gameMode, onlinePlayerId, onlineGameId, winner, gameTime, walls, applyActionToState, updateStateFromOnline]);
   
+  // Polling effect to ensure synchronization in online games
+  useEffect(() => {
+    if (gameState !== GameState.PLAYING || gameMode !== GameMode.PVO || !onlineGameId || winner || currentPlayerId === onlinePlayerId) {
+        return; // Only poll on opponent's turn in an online game
+    }
+
+    const intervalId = setInterval(async () => {
+        const fetchedState = await onlineService.fetchCurrentGameState(onlineGameId);
+        // Only update if the fetched state shows it's now our turn, or if someone has won.
+        if (fetchedState && (fetchedState.currentPlayerId === onlinePlayerId || fetchedState.winner)) {
+            updateStateFromOnline(fetchedState);
+        }
+    }, 2000); // Poll every 2 seconds
+
+    return () => clearInterval(intervalId);
+  }, [gameState, gameMode, onlineGameId, currentPlayerId, onlinePlayerId, winner, updateStateFromOnline]);
+
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const gameId = params.get('join');
     if (gameId) {
       const p2Name = sessionStorage.getItem('playerName') || 'Player 2';
       handleJoinOnlineGame(gameId, p2Name);
-      window.history.replaceState({}, document.title, window.location.pathname); // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname); 
     }
   }, [handleJoinOnlineGame]);
 

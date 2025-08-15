@@ -1,5 +1,7 @@
 
 
+
+
 import mqtt from 'mqtt';
 import type { MqttClient } from 'mqtt';
 import { BOARD_SIZE } from '../constants';
@@ -167,8 +169,40 @@ class OnlineGameService {
         });
     }
 
-    public async leaveGame(gameId: string) {
+    public fetchCurrentGameState(gameId: string): Promise<OnlineGameData | null> {
+        return new Promise(async (resolve) => {
+            const client = await this.connect();
+            const topic = `${TOPIC_PREFIX}/game/${gameId}/state`;
+
+            const timeoutId = setTimeout(() => {
+                client.removeListener('message', messageHandler);
+                client.unsubscribe(topic);
+                resolve(null);
+            }, 2000); // Shorter 2-second timeout for polling
+
+            const messageHandler = (t: string, payload: Buffer) => {
+                if (t === topic) {
+                    clearTimeout(timeoutId);
+                    client.removeListener('message', messageHandler);
+                    client.unsubscribe(topic);
+                    const msgStr = payload.toString();
+                    if (msgStr) resolve(JSON.parse(msgStr));
+                    else resolve(null);
+                }
+            };
+            client.on('message', messageHandler);
+            client.subscribe(topic, { qos: 1 });
+        });
+    }
+
+    public async leaveGame(gameId: string, finalState?: OnlineGameData) {
         const client = await this.connect();
+        if (finalState) {
+            await this.publishGameState(gameId, finalState);
+            // Small delay to increase chance of delivery before clearing the retained message.
+            await new Promise(resolve => setTimeout(resolve, 200));
+        }
+        // Clear the retained message for the topic to prevent new players from joining an old game.
         client.publish(`${TOPIC_PREFIX}/game/${gameId}/state`, '', { qos: 1, retain: true });
     }
     

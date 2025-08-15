@@ -285,10 +285,10 @@ const WaitingForOpponentModal: React.FC<{
     onCancelCreateGame?: () => void;
 }> = ({ gameId, hasTimeout, onCancelSearch, onCancelCreateGame }) => {
     const [copied, setCopied] = useState(false);
-    const joinUrl = gameId ? `${window.location.origin}?join=${gameId}` : '';
     const isFindingMatch = !gameId && hasTimeout;
     const initialTime = isFindingMatch ? 3 * 60 : 5 * 60;
     const [timeLeft, setTimeLeft] = useState(initialTime);
+    const joinUrl = gameId ? `${window.location.origin}${window.location.pathname}?join=${gameId}` : '';
 
     useEffect(() => {
         if (!hasTimeout || timeLeft <= 0) return;
@@ -315,7 +315,7 @@ const WaitingForOpponentModal: React.FC<{
                 {isFindingMatch ? (
                     <p className="text-gray-600">Searching for another player. This may take a moment.</p>
                 ) : (
-                    <p className="text-gray-600">Share this link with a friend to invite them to the game.</p>
+                    <p className="text-gray-600">Share this link with a friend to invite them.</p>
                 )}
 
                 {gameId && (
@@ -326,7 +326,7 @@ const WaitingForOpponentModal: React.FC<{
                 )}
                 {hasTimeout && timeLeft > 0 && (
                     <p className="text-sm text-gray-500">
-                        {isFindingMatch ? 'Search will time out in' : 'Link will expire in'}: <span className="font-bold">{formatTime(timeLeft)}</span>
+                        {isFindingMatch ? 'Search will time out in' : 'Game will expire in'}: <span className="font-bold">{formatTime(timeLeft)}</span>
                     </p>
                 )}
                  {isFindingMatch && onCancelSearch && (
