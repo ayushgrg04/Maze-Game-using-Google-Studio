@@ -33,6 +33,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
   onCancelWallPreview,
   currentPlayerId,
 }) => {
+  const currentPlayerColor = players[currentPlayerId]?.color;
+  
   const renderCell = (r: number, c: number) => {
     const player1 = players[1];
     const player2 = players[2];
@@ -99,12 +101,17 @@ const GameBoard: React.FC<GameBoardProps> = ({
       >
         {isPlayer1Here && playerPiece(players[1], isSelected && players[1].id === currentPlayerId)}
         {isPlayer2Here && playerPiece(players[2], isSelected && players[2].id === currentPlayerId)}
-        {isValidMove && <div className="absolute inset-0 flex items-center justify-center pointer-events-none"><div className="w-1/3 h-1/3 bg-blue-400 rounded-full opacity-80"></div></div>}
+        {isValidMove && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div 
+              className="w-1/3 h-1/3 rounded-full opacity-80"
+              style={{ backgroundColor: currentPlayerColor || '#60a5fa' }}
+            ></div>
+          </div>
+        )}
       </div>
     );
   };
-
-  const currentPlayerColor = players[currentPlayerId]?.color;
 
   return (
     <div className="aspect-square w-full max-w-[95vw] sm:max-w-md md:max-w-lg lg:max-w-2xl mx-auto p-2 bg-slate-200 rounded-2xl shadow-lg">

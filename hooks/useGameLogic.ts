@@ -1,8 +1,6 @@
 
 
-
-
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { BOARD_SIZE } from '../constants';
 import getAiMove from '../services/geminiService';
 import getLocalAiMove from '../services/localAiService';
@@ -175,65 +173,26 @@ const useGameLogic = () => {
     setValidMoves(valid);
   }, [players, walls, currentPlayerId]);
   
-  const handleMove = useCallback((to: Position, from?: Position) => {
-    const fromPos = from || selectedPiece;
-    if (!fromPos || !players[1] || !players[2] || (gameMode === GameMode.PVO && currentPlayerId !== onlinePlayerId)) return;
+  // --- Perspective Transformation Logic for Online Games ---
+  const isPlayer2Perspective = gameMode === GameMode.PVO && onlinePlayerId === 2;
+  
+  const transformPosition = useCallback((pos: Position | null): Position | null => {
+      if (!pos || !isPlayer2Perspective) return pos;
+      return { r: BOARD_SIZE - 1 - pos.r, c: pos.c };
+  }, [isPlayer2Perspective]);
 
-    const opponentPos = players[currentPlayerId === 1 ? 2 : 1].position;
-    const possibleMoves = getPossibleMoves(fromPos, walls, opponentPos);
-    const moveIsValid = possibleMoves.some(move => move.r === to.r && move.c === to.c);
+  const untransformPosition = transformPosition; // The function is its own inverse
 
-    if (moveIsValid) {
-        if (gameMode === GameMode.PVO && onlineGameId && onlinePlayerId) {
-            const currentState: OnlineGameData = { players, walls, currentPlayerId, winner, gameTime, turnTime };
-            const nextState = applyActionToState(currentState, { type: 'MOVE', to }, onlinePlayerId);
-            updateStateFromOnline(nextState); // Optimistic local update
-            onlineService.publishGameState(onlineGameId, nextState);
-        } else {
-            const updatedPlayers = { ...players };
-            updatedPlayers[currentPlayerId].position = to;
-            setPlayers(updatedPlayers);
-            if (to.r === players[currentPlayerId].goalRow) {
-                setWinner(players[currentPlayerId]);
-                setGameState(GameState.GAME_OVER);
-            } else {
-                switchTurn();
-            }
-        }
-    }
-    setSelectedPiece(null);
-    setValidMoves([]);
-  }, [players, walls, selectedPiece, currentPlayerId, switchTurn, gameMode, onlineGameId, onlinePlayerId, winner, gameTime, turnTime, applyActionToState]);
+  const transformWall = useCallback((wall: Omit<Wall, 'playerId'> | null): Omit<Wall, 'playerId'> | null => {
+      if (!wall || !isPlayer2Perspective) return wall;
+      if (wall.orientation === 'horizontal') {
+          return { ...wall, r: BOARD_SIZE - wall.r };
+      }
+      // vertical wall
+      return { ...wall, r: BOARD_SIZE - 2 - wall.r };
+  }, [isPlayer2Perspective]);
 
-  const handlePlaceWall = useCallback((wall: Omit<Wall, 'playerId'>) => {
-    if (!players[1] || !players[2] || (gameMode === GameMode.PVO && currentPlayerId !== onlinePlayerId)) return;
-    setWallPlacementError(null);
-    const newWall: Wall = { ...wall, playerId: currentPlayerId };
-    
-    if (players[currentPlayerId].wallsLeft <= 0) {
-        setWallPlacementError("You have no walls left.");
-        return;
-    }
-    if (!isValidWallPlacement(newWall, walls, players[1], players[2])) {
-        setWallPlacementError("Invalid Placement. Walls cannot cross or completely block a player.");
-        return;
-    }
-
-    if(gameMode === GameMode.PVO && onlineGameId && onlinePlayerId) {
-        const currentState: OnlineGameData = { players, walls, currentPlayerId, winner, gameTime, turnTime };
-        const nextState = applyActionToState(currentState, { type: 'PLACE_WALL', wall }, onlinePlayerId);
-        updateStateFromOnline(nextState); // Optimistic local update
-        onlineService.publishGameState(onlineGameId, nextState);
-    } else {
-      setWalls(prev => [...prev, newWall]);
-      setPlayers(prev => ({
-          ...prev,
-          [currentPlayerId]: { ...prev[currentPlayerId], wallsLeft: prev[currentPlayerId].wallsLeft - 1, },
-      }));
-      setIsPlacingWall(false);
-      switchTurn();
-    }
-  }, [players, walls, currentPlayerId, isValidWallPlacement, switchTurn, gameMode, onlineGameId, onlinePlayerId, winner, gameTime, turnTime, applyActionToState]);
+  const untransformWall = transformWall; // This is also its own inverse
 
   const updateStateFromOnline = useCallback((data: OnlineGameData) => {
       setPlayers(data.players);
@@ -264,6 +223,72 @@ const useGameLogic = () => {
           );
       }
   }, [onlineRequestTimeout]);
+
+  const handleMove = useCallback((to: Position, from?: Position) => {
+    // Untransform coordinates from display-space to true-space if needed
+    const realTo = untransformPosition(to)!;
+    const realFrom = from ? untransformPosition(from)! : selectedPiece!;
+
+    if (!realFrom || !players[1] || !players[2] || (gameMode === GameMode.PVO && currentPlayerId !== onlinePlayerId)) return;
+
+    const opponentPos = players[currentPlayerId === 1 ? 2 : 1].position;
+    const possibleMoves = getPossibleMoves(realFrom, walls, opponentPos);
+    const moveIsValid = possibleMoves.some(move => move.r === realTo.r && move.c === realTo.c);
+
+    if (moveIsValid) {
+        if (gameMode === GameMode.PVO && onlineGameId && onlinePlayerId) {
+            const currentState: OnlineGameData = { players, walls, currentPlayerId, winner, gameTime, turnTime };
+            const nextState = applyActionToState(currentState, { type: 'MOVE', to: realTo }, onlinePlayerId);
+            updateStateFromOnline(nextState); // Optimistic local update
+            onlineService.publishGameState(onlineGameId, nextState);
+        } else {
+            const updatedPlayers = { ...players };
+            updatedPlayers[currentPlayerId].position = realTo;
+            setPlayers(updatedPlayers);
+            if (realTo.r === players[currentPlayerId].goalRow) {
+                setWinner(players[currentPlayerId]);
+                setGameState(GameState.GAME_OVER);
+            } else {
+                switchTurn();
+            }
+        }
+    }
+    setSelectedPiece(null);
+    setValidMoves([]);
+  }, [players, walls, selectedPiece, currentPlayerId, switchTurn, gameMode, onlineGameId, onlinePlayerId, winner, gameTime, turnTime, applyActionToState, untransformPosition, updateStateFromOnline]);
+
+  const handlePlaceWall = useCallback((wall: Omit<Wall, 'playerId'>) => {
+    // Untransform wall from display-space to true-space
+    const realWall = untransformWall(wall)!;
+
+    if (!players[1] || !players[2] || (gameMode === GameMode.PVO && currentPlayerId !== onlinePlayerId)) return;
+    setWallPlacementError(null);
+    const newWall: Wall = { ...realWall, playerId: currentPlayerId };
+    
+    if (players[currentPlayerId].wallsLeft <= 0) {
+        setWallPlacementError("You have no walls left.");
+        return;
+    }
+    if (!isValidWallPlacement(newWall, walls, players[1], players[2])) {
+        setWallPlacementError("Invalid Placement. Walls cannot cross or completely block a player.");
+        return;
+    }
+
+    if(gameMode === GameMode.PVO && onlineGameId && onlinePlayerId) {
+        const currentState: OnlineGameData = { players, walls, currentPlayerId, winner, gameTime, turnTime };
+        const nextState = applyActionToState(currentState, { type: 'PLACE_WALL', wall: realWall }, onlinePlayerId);
+        updateStateFromOnline(nextState); // Optimistic local update
+        onlineService.publishGameState(onlineGameId, nextState);
+    } else {
+      setWalls(prev => [...prev, newWall]);
+      setPlayers(prev => ({
+          ...prev,
+          [currentPlayerId]: { ...prev[currentPlayerId], wallsLeft: prev[currentPlayerId].wallsLeft - 1, },
+      }));
+      switchTurn();
+    }
+    setIsPlacingWall(false);
+  }, [players, walls, currentPlayerId, isValidWallPlacement, switchTurn, gameMode, onlineGameId, onlinePlayerId, winner, gameTime, turnTime, applyActionToState, untransformWall, updateStateFromOnline]);
 
   useEffect(() => {
       if (onlineGameId) {
@@ -514,8 +539,11 @@ const useGameLogic = () => {
 
   const handleWallPreview = useCallback((wall: Omit<Wall, 'playerId'>) => setWallPreview(wall), []);
   const confirmWallPlacement = useCallback(() => {
-    if (wallPreview) handlePlaceWall(wallPreview);
-    setWallPreview(null);
+    if (wallPreview) {
+        handlePlaceWall(wallPreview);
+        setWallPreview(null);
+        setIsPlacingWall(false); // Always exit placing mode after confirming
+    }
   }, [wallPreview, handlePlaceWall]);
   const cancelWallPlacement = useCallback(() => setWallPreview(null), []);
   
@@ -535,12 +563,66 @@ const useGameLogic = () => {
     initializeLocalGame(mode, p1Name, type, diff, duration, startPos, wallsCount);
   }
 
+  // This uses the REAL currentPlayerId from state to determine if it's the user's turn.
+  const isMyTurn = useMemo(() => {
+    if (gameState !== GameState.PLAYING || winner) return false;
+    if (gameMode === GameMode.PVO) {
+        return currentPlayerId === onlinePlayerId;
+    }
+    if (gameMode === GameMode.PVC) {
+        return currentPlayerId === 1;
+    }
+    return true; // For local PVP, UI is always interactive for the current player
+  }, [gameState, gameMode, currentPlayerId, onlinePlayerId, winner]);
+
+  // --- Create derived state for UI display based on perspective ---
+  const displayPlayers = useMemo(() => {
+    if (!isPlayer2Perspective || !players[1] || !players[2]) {
+      return players;
+    }
+    // For P2, swap player data and transform positions so P2 is at the bottom
+    return {
+      1: { ...players[2], position: transformPosition(players[2].position)! },
+      2: { ...players[1], position: transformPosition(players[1].position)! },
+    };
+  }, [isPlayer2Perspective, players, transformPosition]);
+
+  const displayWalls = useMemo(() => {
+    if (!isPlayer2Perspective) {
+      return walls;
+    }
+    return walls.map(w => {
+      const transformedCoords = transformWall({ r: w.r, c: w.c, orientation: w.orientation })!;
+      // Wall color depends on playerId. On a flipped board, p1's wall belongs to the player at top (display P2)
+      const displayPlayerId: 1 | 2 = w.playerId === 1 ? 2 : 1;
+      return { ...w, ...transformedCoords, playerId: displayPlayerId };
+    });
+  }, [isPlayer2Perspective, walls, transformWall]);
+
+  const displayCurrentPlayerId = useMemo(() => {
+    if (!isPlayer2Perspective) {
+      return currentPlayerId;
+    }
+    // For Player 2, the UI needs to see the opponent (real player 1) as player 2.
+    return currentPlayerId === 1 ? 2 : 1;
+  }, [isPlayer2Perspective, currentPlayerId]);
+
+  const displaySelectedPiece = useMemo(() => transformPosition(selectedPiece), [selectedPiece, transformPosition]);
+  const displayValidMoves = useMemo(() => validMoves.map(m => transformPosition(m)!), [validMoves, transformPosition]);
+
   return {
-    gameState, gameMode, difficulty, aiType, players, walls, currentPlayerId, winner,
-    selectedPiece, validMoves, isPlacingWall, aiThinking, lastAiAction, apiError,
+    gameState, gameMode, difficulty, aiType, 
+    currentPlayerId: displayCurrentPlayerId, // Return the transformed ID for the UI
+    winner,
+    players: displayPlayers, 
+    walls: displayWalls, 
+    selectedPiece: displaySelectedPiece,
+    validMoves: displayValidMoves,
+    isPlacingWall, aiThinking, lastAiAction, apiError,
     gameTime, turnTime, showRateLimitModal, wallPlacementError,
     configuredTurnTime, startPosition, wallPreview, onlineGameId, onlinePlayerId, onlineRequestTimeout,
     initialWalls,
+    isMyTurn, // This is now the source of truth for UI interactivity
     setShowRateLimitModal,
     startGame, handleCellClick: handleMove,
     handleWallPreview,

@@ -1,5 +1,7 @@
 
 
+
+
 import React, { useState, useEffect } from 'react';
 import useGameLogic from './hooks/useGameLogic';
 import GameBoard from './components/GameBoard';
@@ -36,6 +38,7 @@ const App: React.FC = () => {
         selectedPiece, validMoves, isPlacingWall, aiThinking, lastAiAction, apiError, gameTime, turnTime,
         showRateLimitModal, wallPlacementError, setShowRateLimitModal, configuredTurnTime, startPosition,
         wallPreview, onlineGameId, onlinePlayerId, onlineRequestTimeout, initialWalls,
+        isMyTurn,
         startGame, handleCellClick, handleWallPreview, confirmWallPlacement, cancelWallPlacement,
         togglePlacingWall, returnToMenu, handleCreateOnlineGame, handleJoinOnlineGame, handleFindMatch, handleCancelFindMatch, handleCancelCreateGame,
     } = useGameLogic();
@@ -117,14 +120,10 @@ const App: React.FC = () => {
     }
 
     const currentPlayer = players[currentPlayerId];
-    // Statically determine which player is "me" and which is the "opponent" for display purposes.
-    const myPlayer = players[onlinePlayerId || 1];
-    const opponentId = onlinePlayerId === 1 ? 2 : (onlinePlayerId === 2 ? 1 : 2); // default to 2 for local games
-    const opponentPlayerForDisplay = players[opponentId];
-
-    const isMyTurnOnline = gameMode === GameMode.PVO && currentPlayerId === onlinePlayerId;
-    const canInteract = gameMode !== GameMode.PVO || isMyTurnOnline;
-    const isHumanTurnInPVC = gameMode === GameMode.PVC && currentPlayerId === 1;
+    // In local games or as Player 1, "me" is player 1. For Player 2 online, perspective is flipped.
+    // The useGameLogic hook now returns players with the correct perspective, so player 1 is always "me".
+    const myPlayer = players[1]; 
+    const opponentPlayer = players[2];
     
     const aiPlayerName = players[2]?.name || 'AI';
 
@@ -133,7 +132,7 @@ const App: React.FC = () => {
             <header className="w-full max-w-2xl flex-shrink-0">
                  <div className="flex justify-between items-center w-full">
                     <div className="relative flex-1">
-                        {opponentPlayerForDisplay && <PlayerInfo player={opponentPlayerForDisplay} />}
+                        {opponentPlayer && <PlayerInfo player={opponentPlayer} />}
                         {gameMode === GameMode.PVC && aiMessage && <AiChatTooltip message={aiMessage} />}
                     </div>
                     <div className="text-center flex-1">
@@ -141,7 +140,7 @@ const App: React.FC = () => {
                         <p className="text-2xl font-bold text-gray-700">{formatTime(gameTime)}</p>
                     </div>
                     <div className="flex-1 flex justify-end">
-                        {currentPlayer?.id === opponentPlayerForDisplay?.id && <TurnTimer turnTime={turnTime} player={currentPlayer} />}
+                        {currentPlayer?.id === opponentPlayer?.id && <TurnTimer turnTime={turnTime} player={currentPlayer} />}
                     </div>
                 </div>
             </header>
@@ -191,7 +190,7 @@ const App: React.FC = () => {
                     </div>
                 ) : (
                     <div className="flex w-full space-x-4 mt-4">
-                         <button onClick={togglePlacingWall} disabled={!currentPlayer || currentPlayer.wallsLeft === 0 || !canInteract || (gameMode === GameMode.PVC && currentPlayerId === 2)} className={`w-full py-3 rounded-lg font-bold text-white transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${isPlacingWall ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'}`}>
+                         <button onClick={togglePlacingWall} disabled={!currentPlayer || currentPlayer.wallsLeft === 0 || !isMyTurn} className={`w-full py-3 rounded-lg font-bold text-white transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${isPlacingWall ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'}`}>
                             {isPlacingWall ? 'Cancel' : 'Place Wall'}
                          </button>
                          <button onClick={returnToMenu} className="w-full py-3 rounded-lg font-bold text-gray-700 bg-gray-300 hover:bg-gray-400 transition-all shadow-md">New Game</button>

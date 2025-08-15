@@ -2,6 +2,8 @@
 
 
 
+
+
 import mqtt from 'mqtt';
 import type { MqttClient } from 'mqtt';
 import { BOARD_SIZE } from '../constants';
@@ -241,7 +243,7 @@ class OnlineGameService {
             gameTime: 0,
             turnTime: matchData.duration,
         };
-        // The player who creates the match from the lobby is player 2
+        // The player receiving MATCH_FOUND is the Joiner, who is always Player 2
         this.onMatchFoundCallback(matchData.gameId, 2, initialState);
         this.cancelFindMatch();
     }
@@ -249,19 +251,23 @@ class OnlineGameService {
     private createMatchFromLobby(request: LobbyMessage) {
         if (!this.onMatchFoundCallback) return;
 
+        // The player who was waiting (us) is Player 1
+        const p1Data = JSON.parse(sessionStorage.getItem('matchmaking_player') || '{}');
+        // The player who sent the request is Player 2
+        const p2Data = request.playerData;
+        p2Data.wallsLeft = p1Data.wallsLeft; // Enforce fairness: both players get same wall count
+
         const p1Col = request.startPos === StartPosition.CENTER ? Math.floor(BOARD_SIZE / 2) : Math.floor(Math.random() * BOARD_SIZE);
         const p2Col = (BOARD_SIZE - 1) - p1Col;
         
-        const p1: Player = { ...request.playerData, id: 1, color: '#3b82f6', position: { r: BOARD_SIZE - 1, c: p1Col }, goalRow: 0 };
-        const p2Data = JSON.parse(sessionStorage.getItem('matchmaking_player') || '{}');
-        // Ensure Player 2 uses the same wall count as Player 1 for fairness
-        p2Data.wallsLeft = request.playerData.wallsLeft;
+        const p1: Player = { ...p1Data, id: 1, color: '#3b82f6', position: { r: BOARD_SIZE - 1, c: p1Col }, goalRow: 0 };
         const p2: Player = { ...p2Data, id: 2, color: '#ec4899', position: { r: 0, c: p2Col }, goalRow: BOARD_SIZE - 1 };
         
         const gameId = Math.random().toString(36).substr(2, 6);
         const matchMessage: MatchMessage = { type: 'MATCH_FOUND', gameId, player1: p1, player2: p2, duration: request.duration };
 
         this.connect().then(client => {
+            // Send the match data to Player 2
             client.publish(`${TOPIC_PREFIX}/lobby/match/${request.lobbyId}`, JSON.stringify(matchMessage), { qos: 1 });
         });
         
@@ -274,6 +280,7 @@ class OnlineGameService {
             turnTime: request.duration
         };
         this.publishGameState(gameId, initialState);
+        // We are Player 1, so we call our callback with playerId: 1
         this.onMatchFoundCallback(gameId, 1, initialState);
         this.cancelFindMatch();
     }
