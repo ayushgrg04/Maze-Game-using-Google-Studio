@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BOARD_SIZE } from '../constants';
 import type { Player, Position, Wall } from '../types';
@@ -106,7 +107,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
   const currentPlayerColor = players[currentPlayerId]?.color;
 
   return (
-    <div className="aspect-square w-full max-w-2xl mx-auto p-2 bg-slate-200 rounded-2xl shadow-lg">
+    <div className="aspect-square w-full max-w-[95vw] sm:max-w-md md:max-w-lg lg:max-w-2xl mx-auto p-2 bg-slate-200 rounded-2xl shadow-lg">
       <div
         className="relative grid bg-slate-300 h-full w-full"
         style={{

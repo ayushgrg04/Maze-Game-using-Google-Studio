@@ -8,7 +8,7 @@ import { AiChatTooltip } from './components/AiChatTooltip';
 import { GameState, GameMode, Difficulty, Player, AiType, StartPosition } from './types';
 
 const TurnIndicator: React.FC<{player: Player}> = ({ player }) => (
-    <div className="bg-white rounded-full shadow-md px-4 py-2 flex items-center space-x-3">
+    <div className="bg-white rounded-full shadow-md px-4 py-2 flex items-center space-x-3 my-2">
         <div className={`w-3 h-3 rounded-full`} style={{ backgroundColor: player.color }}></div>
         <span className="font-semibold text-gray-700">{player.name}'s Turn</span>
     </div>
@@ -62,7 +62,7 @@ const App: React.FC = () => {
     if (gameState === GameState.MENU) {
         return (
             <div className="min-h-screen flex items-center justify-center p-4 bg-gray-100">
-                <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-lg border space-y-6">
+                <div className="w-full max-w-md bg-white p-6 md:p-8 rounded-2xl shadow-lg border space-y-6">
                     <div>
                         <h1 className="text-4xl font-bold text-center mb-2 text-gray-800">Maze Race</h1>
                         <p className="text-gray-500 text-center">A strategic game of wits and walls.</p>
@@ -145,57 +145,65 @@ const App: React.FC = () => {
     const aiPlayerName = players[2]?.name || 'AI';
 
     return (
-        <main className="min-h-screen flex flex-col items-center justify-center p-4 space-y-4">
-            <h1 className="text-4xl font-bold text-gray-800">Maze Race</h1>
-
-            {currentPlayer && <TurnIndicator player={currentPlayer} />}
-
-            <div className="flex justify-around w-full max-w-sm text-center my-2">
-                <div>
-                    <p className="text-sm font-medium text-gray-500">TURN TIME</p>
-                    <p className={turnTimeClasses}>{formatTime(turnTime)}</p>
+        <main className="min-h-screen w-full bg-gray-100 flex flex-col items-center justify-between p-2 sm:p-4">
+            {/* Header: Opponent Info and Game Time */}
+            <header className="w-full max-w-2xl">
+                 <div className="flex justify-between items-center w-full mb-2">
+                    <div className="relative">
+                        {players[2] && <PlayerInfo player={players[2]} />}
+                        {gameMode === GameMode.PVC && aiMessage && <AiChatTooltip message={aiMessage} />}
+                    </div>
+                    <div className="text-center">
+                        <p className="text-sm font-medium text-gray-500">GAME TIME</p>
+                        <p className="text-2xl font-bold text-gray-700">{formatTime(gameTime)}</p>
+                    </div>
                 </div>
-                <div>
-                    <p className="text-sm font-medium text-gray-500">GAME TIME</p>
-                    <p className="text-2xl font-bold text-gray-700">{formatTime(gameTime)}</p>
+            </header>
+
+            {/* Main Content: Turn Indicator and Game Board */}
+            <div className="w-full flex-grow flex flex-col items-center justify-center">
+                {currentPlayer && <TurnIndicator player={currentPlayer} />}
+                <div className="my-2 sm:my-4 w-full">
+                    <GameBoard 
+                        players={players} 
+                        walls={walls}
+                        currentPlayerId={currentPlayerId}
+                        selectedPiece={selectedPiece}
+                        validMoves={validMoves}
+                        isPlacingWall={isPlacingWall}
+                        onPieceClick={handlePieceClick}
+                        onCellClick={handleCellClick}
+                        onWallClick={handleWallClick}
+                    />
                 </div>
             </div>
 
-            <div className="flex justify-between w-full max-w-sm px-10">
-                {players[1] && <PlayerInfo player={players[1]} />}
-                 <div className="relative">
-                    {players[2] && <PlayerInfo player={players[2]} />}
-                    {gameMode === GameMode.PVC && aiMessage && <AiChatTooltip message={aiMessage} />}
-                 </div>
-            </div>
+            {/* Footer: Player Info, Turn Time, and Controls */}
+            <footer className="w-full max-w-2xl">
+                <div className="flex justify-between items-center w-full mt-2">
+                    <div className="text-center">
+                        <p className="text-sm font-medium text-gray-500">TURN TIME</p>
+                        <p className={turnTimeClasses}>{formatTime(turnTime)}</p>
+                    </div>
+                    {players[1] && <PlayerInfo player={players[1]} />}
+                </div>
 
-            <GameBoard 
-                players={players} 
-                walls={walls}
-                currentPlayerId={currentPlayerId}
-                selectedPiece={selectedPiece}
-                validMoves={validMoves}
-                isPlacingWall={isPlacingWall}
-                onPieceClick={handlePieceClick}
-                onCellClick={handleCellClick}
-                onWallClick={handleWallClick}
-            />
-
-            <div className="flex w-full max-w-sm space-x-4">
-                 <button 
-                    onClick={togglePlacingWall} 
-                    disabled={!currentPlayer || currentPlayer.wallsLeft === 0 || (gameMode === GameMode.PVC && currentPlayerId === 2)}
-                    className={`w-full py-3 rounded-lg font-bold text-white transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${isPlacingWall ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'}`}
-                  >
-                    {isPlacingWall ? 'Cancel Wall' : 'Place Wall'}
-                 </button>
-                 <button 
-                    onClick={returnToMenu}
-                    className="w-full py-3 rounded-lg font-bold text-gray-700 bg-gray-300 hover:bg-gray-400 transition-all shadow-md"
-                  >
-                    New Game
-                 </button>
-            </div>
+                <div className="flex w-full space-x-4 mt-4">
+                     <button 
+                        onClick={togglePlacingWall} 
+                        disabled={!currentPlayer || currentPlayer.wallsLeft === 0 || (gameMode === GameMode.PVC && currentPlayerId === 2)}
+                        className={`w-full py-3 rounded-lg font-bold text-white transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${isPlacingWall ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'}`}
+                      >
+                        {isPlacingWall ? 'Cancel Wall' : 'Place Wall'}
+                     </button>
+                     <button 
+                        onClick={returnToMenu}
+                        className="w-full py-3 rounded-lg font-bold text-gray-700 bg-gray-300 hover:bg-gray-400 transition-all shadow-md"
+                      >
+                        New Game
+                     </button>
+                </div>
+            </footer>
             
             {gameState === GameState.GAME_OVER && winner && (
                 <Modal title="Game Over!">
