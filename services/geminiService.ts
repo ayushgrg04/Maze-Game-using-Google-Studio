@@ -7,12 +7,11 @@ const getAiMove = async (
   aiPlayerId: 1 | 2,
   walls: Wall[],
   difficulty: Difficulty
-): Promise<AiAction | null> => {
+): Promise<AiAction> => {
     
   if (!process.env.API_KEY) {
     console.error("API_KEY environment variable not set.");
-    // Fallback simple logic if API key is missing
-    return null;
+    throw new Error("API key is not configured.");
   }
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -84,11 +83,18 @@ const getAiMove = async (
     });
 
     const text = response.text.trim();
-    return JSON.parse(text) as AiAction;
+    const action = JSON.parse(text) as AiAction;
+    if (!action || !action.action || !action.position || !action.reasoning) {
+        throw new Error("AI returned an incomplete or invalid action.");
+    }
+    return action;
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching AI move from Gemini:", error);
-    return null; // Fallback in case of API error
+    if (error.message && error.message.includes('RESOURCE_EXHAUSTED')) {
+        throw new Error("AI request limit reached. Please try again in a minute.");
+    }
+    throw new Error(error.message || "An unknown error occurred while contacting the AI.");
   }
 };
 

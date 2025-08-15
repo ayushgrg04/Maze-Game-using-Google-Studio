@@ -37,6 +37,11 @@ export enum Difficulty {
   HARD = 'HARD',
 }
 
+export enum AiType {
+  GEMINI = 'GEMINI',
+  LOCAL = 'LOCAL',
+}
+
 export type AiAction = {
   action: 'MOVE' | 'PLACE_WALL';
   position: Position;

@@ -1,13 +1,17 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { BOARD_SIZE, INITIAL_WALLS } from '../constants';
 import getAiMove from '../services/geminiService';
+import getLocalAiMove from '../services/localAiService';
+import { findShortestPath } from '../utils/pathfinding';
 import type { Player, Position, Wall, AiAction } from '../types';
-import { GameState, GameMode, Difficulty } from '../types';
+import { GameState, GameMode, Difficulty, AiType } from '../types';
 
 const useGameLogic = () => {
   const [gameState, setGameState] = useState<GameState>(GameState.MENU);
   const [gameMode, setGameMode] = useState<GameMode>(GameMode.PVP);
   const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.MEDIUM);
+  const [aiType, setAiType] = useState<AiType>(AiType.GEMINI);
   const [players, setPlayers] = useState<{ [key: number]: Player }>({});
   const [walls, setWalls] = useState<Wall[]>([]);
   const [currentPlayerId, setCurrentPlayerId] = useState<1 | 2>(1);
@@ -17,10 +21,18 @@ const useGameLogic = () => {
   const [isPlacingWall, setIsPlacingWall] = useState(false);
   const [aiThinking, setAiThinking] = useState(false);
   const [lastAiAction, setLastAiAction] = useState<AiAction | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
   const [gameTime, setGameTime] = useState(0);
   const [turnTime, setTurnTime] = useState(60);
+  const [showRateLimitModal, setShowRateLimitModal] = useState(false);
+  const [wallPlacementError, setWallPlacementError] = useState<string | null>(null);
 
-  const initializeGame = useCallback((mode: GameMode, p1Name: string = 'Player 1') => {
+
+  const initializeGame = useCallback((mode: GameMode, p1Name: string = 'Player 1', selectedAiType: AiType) => {
+    let p2Name = 'Player 2';
+    if (mode === GameMode.PVC) {
+        p2Name = selectedAiType === AiType.GEMINI ? 'Gemini AI' : 'Local AI';
+    }
     const p1: Player = {
       id: 1,
       name: p1Name,
@@ -31,7 +43,7 @@ const useGameLogic = () => {
     };
     const p2: Player = {
       id: 2,
-      name: mode === GameMode.PVP ? 'Player 2' : 'Gemini AI',
+      name: p2Name,
       color: '#ec4899', // pink-500
       position: { r: 0, c: Math.floor(BOARD_SIZE / 2) },
       wallsLeft: INITIAL_WALLS,
@@ -46,6 +58,7 @@ const useGameLogic = () => {
     setIsPlacingWall(false);
     setGameState(GameState.PLAYING);
     setLastAiAction(null);
+    setApiError(null);
     setGameTime(0);
     setTurnTime(60);
   }, []);
@@ -99,30 +112,22 @@ const useGameLogic = () => {
 
     // Check for collisions with existing walls
     for (const w of currentWalls) {
-        // Direct overlap
         if (w.r === wall.r && w.c === wall.c && w.orientation === wall.orientation) return false; 
-        
         if (wall.orientation === 'horizontal') {
-            // Adjacent horizontal walls overlapping
             if (w.orientation === 'horizontal' && w.r === wall.r && Math.abs(w.c - wall.c) < 2) return false;
-            // Crossing a vertical wall (forming a '+')
             if (w.orientation === 'vertical' && w.r === wall.r - 1 && w.c === wall.c + 1) return false;
-        } else { // vertical
-            // Adjacent vertical walls overlapping
+        } else {
             if (w.orientation === 'vertical' && w.c === wall.c && Math.abs(w.r - wall.r) < 2) return false;
-            // Crossing a horizontal wall (forming a '+')
             if (w.orientation === 'horizontal' && w.r === wall.r + 1 && w.c === wall.c - 1) return false;
         }
     }
 
-    // A correct implementation requires a more robust pathfinding algorithm (like A* or BFS)
-    // to ensure no player is completely blocked off. This is a complex check.
-    // For now, we allow placements that don't physically collide.
-    // const newWalls = [...currentWalls, wall];
-    // if (!pathExists(p1.position, p1.goalRow, newWalls)) return false;
-    // if (!pathExists(p2.position, p2.goalRow, newWalls)) return false;
-
-    return true;
+    // Pathfinding check to ensure no player is completely blocked off
+    const newWalls = [...currentWalls, wall];
+    const p1PathExists = findShortestPath(p1.position, p1.goalRow, newWalls) !== null;
+    const p2PathExists = findShortestPath(p2.position, p2.goalRow, newWalls) !== null;
+    
+    return p1PathExists && p2PathExists;
   }, []);
 
   const switchTurn = useCallback(() => {
@@ -130,6 +135,7 @@ const useGameLogic = () => {
     setSelectedPiece(null);
     setValidMoves([]);
     setIsPlacingWall(false);
+    setWallPlacementError(null);
     setTurnTime(60);
   }, []);
   
@@ -155,34 +161,41 @@ const useGameLogic = () => {
 
   const handlePlaceWall = useCallback((wall: Omit<Wall, 'playerId'>) => {
     if (!players[1] || !players[2]) return;
+    setWallPlacementError(null);
+
     const newWall: Wall = { ...wall, playerId: currentPlayerId };
-    if (players[currentPlayerId].wallsLeft > 0 && isValidWallPlacement(newWall, walls, players[1], players[2])) {
-        setWalls(prev => [...prev, newWall]);
-        setPlayers(prev => ({
-            ...prev,
-            [currentPlayerId]: {
-                ...prev[currentPlayerId],
-                wallsLeft: prev[currentPlayerId].wallsLeft - 1,
-            },
-        }));
-        switchTurn();
+    
+    if (players[currentPlayerId].wallsLeft <= 0) {
+        setWallPlacementError("You have no walls left.");
+        return;
     }
+
+    if (!isValidWallPlacement(newWall, walls, players[1], players[2])) {
+        setWallPlacementError("Invalid Placement. Walls cannot cross or completely block a player.");
+        return;
+    }
+
+    setWalls(prev => [...prev, newWall]);
+    setPlayers(prev => ({
+        ...prev,
+        [currentPlayerId]: {
+            ...prev[currentPlayerId],
+            wallsLeft: prev[currentPlayerId].wallsLeft - 1,
+        },
+    }));
     setIsPlacingWall(false);
+    switchTurn();
   }, [players, walls, currentPlayerId, isValidWallPlacement, switchTurn]);
   
   const calculateValidMoves = useCallback((pos: Position) => {
     if (!players[1] || !players[2]) return;
     const { r, c } = pos;
-    // Base orthogonal moves
     let potentialMoves = [{ r: r - 1, c }, { r: r + 1, c }, { r, c: c - 1 }, { r, c: c + 1 }];
-    // Jumps
     potentialMoves.push({r:r-2, c:c}, {r:r+2, c:c}, {r:r, c:c-2}, {r:r, c:c+2});
-    // Diagonal jumps
     const opponentPos = players[currentPlayerId === 1 ? 2: 1].position;
     if( (Math.abs(pos.r - opponentPos.r) + Math.abs(pos.c - opponentPos.c)) === 1){
       potentialMoves.push({r:opponentPos.r + (opponentPos.r - pos.r), c:opponentPos.c + (opponentPos.c-pos.c)});
     }
-    
     const valid = potentialMoves.filter(move => isValidMove(pos, move, players[1].position, players[2].position, walls));
     setValidMoves(valid);
   }, [players, walls, isValidMove, currentPlayerId]);
@@ -205,48 +218,71 @@ const useGameLogic = () => {
     
     setAiThinking(true);
     setLastAiAction(null);
-    const aiAction = await getAiMove(players, 2, walls, difficulty);
-    const aiPlayer = players[2];
+    setApiError(null);
 
-    if (!aiAction) {
-      const {position} = aiPlayer;
-      const moves = [{r:position.r-1, c:position.c}, {r:position.r+1, c:position.c}, {r:position.r, c:position.c-1}, {r:position.r, c:position.c+1}];
-      const validAiMoves = moves.filter(m => isValidMove(position, m, players[1].position, aiPlayer.position, walls));
-      if(validAiMoves.length > 0) {
-        const forwardMove = validAiMoves.find(m => m.r > position.r); // AI goal is row 8 (bottom)
-        handleMove(forwardMove || validAiMoves[0], position);
-      }
-      setAiThinking(false);
-      return;
-    }
-    
-    setLastAiAction(aiAction);
+    try {
+        const aiPlayer = players[2];
+        const humanPlayer = players[1];
+        if (!aiPlayer || !humanPlayer) return;
 
-    if (aiAction.action === 'MOVE') {
-        const { r, c } = aiAction.position;
-        if (isValidMove(aiPlayer.position, { r, c }, players[1].position, aiPlayer.position, walls)) {
-            handleMove({ r, c }, aiPlayer.position);
+        let aiAction: AiAction;
+        if (aiType === AiType.LOCAL) {
+            const checkWall = (wall: Wall) => isValidWallPlacement(wall, walls, humanPlayer, aiPlayer);
+            aiAction = getLocalAiMove(aiPlayer, humanPlayer, walls, difficulty, checkWall);
         } else {
-            const validAiMoves = [{r: aiPlayer.position.r+1, c: aiPlayer.position.c}].filter(m => isValidMove(aiPlayer.position, m, players[1].position, aiPlayer.position, walls));
-            if(validAiMoves.length > 0) handleMove(validAiMoves[0], aiPlayer.position); else switchTurn();
+            aiAction = await getAiMove(players, 2, walls, difficulty);
         }
-    } else if (aiAction.action === 'PLACE_WALL' && aiAction.orientation) {
-        const { position, orientation } = aiAction;
-        const wallToPlace = { r: position.r, c: position.c, orientation: orientation };
-        const wallWithPlayerId = { ...wallToPlace, playerId: currentPlayerId };
         
-        if (isValidWallPlacement(wallWithPlayerId, walls, players[1], players[2])) {
-            handlePlaceWall(wallToPlace);
-        } else {
-            // Fallback to moving if wall placement is invalid
-            const validAiMoves = [{r: aiPlayer.position.r+1, c: aiPlayer.position.c}].filter(m => isValidMove(aiPlayer.position, m, players[1].position, aiPlayer.position, walls));
-            if(validAiMoves.length > 0) handleMove(validAiMoves[0], aiPlayer.position); else switchTurn();
-        }
-    }
-    setAiThinking(false);
-  }, [gameState, gameMode, currentPlayerId, winner, players, walls, difficulty, handleMove, handlePlaceWall, isValidMove, isValidWallPlacement, switchTurn]);
+        setLastAiAction(aiAction);
 
-  // AI thinking trigger
+        if (aiAction.action === 'MOVE') {
+            if (isValidMove(aiPlayer.position, aiAction.position, humanPlayer.position, aiPlayer.position, walls)) {
+                handleMove(aiAction.position, aiPlayer.position);
+            } else {
+                console.warn("AI suggested an invalid move:", aiAction);
+                throw new Error("AI suggested an invalid move.");
+            }
+        } else if (aiAction.action === 'PLACE_WALL') {
+            if (!aiAction.orientation) {
+                console.warn("AI suggested wall placement without orientation:", aiAction);
+                throw new Error("AI suggested placing a wall but did not provide an orientation.");
+            }
+            const wallToPlace = { r: aiAction.position.r, c: aiAction.position.c, orientation: aiAction.orientation };
+            if (isValidWallPlacement({ ...wallToPlace, playerId: aiPlayer.id }, walls, humanPlayer, aiPlayer)) {
+                handlePlaceWall(wallToPlace);
+            } else {
+                console.warn("AI suggested an invalid wall placement:", aiAction);
+                throw new Error("AI suggested an invalid wall placement.");
+            }
+        } else {
+            throw new Error(`AI returned an unknown action type: '${(aiAction as any)?.action}'.`);
+        }
+    } catch (error: any) {
+        if (error.message && error.message.includes('RESOURCE_EXHAUSTED')) {
+            setShowRateLimitModal(true);
+        } else {
+            setApiError(error.message || "An unexpected AI error occurred. Making a default move.");
+        }
+        
+        const aiPlayer = players[2];
+        const humanPlayer = players[1];
+        if (!aiPlayer || !humanPlayer) {
+          setAiThinking(false);
+          return;
+        }
+
+        const fallbackPath = findShortestPath(aiPlayer.position, aiPlayer.goalRow, walls);
+        if (fallbackPath && fallbackPath.length > 1) {
+            handleMove(fallbackPath[1], aiPlayer.position);
+        } else {
+            setApiError(prev => prev ? `${prev} AI is trapped and must skip its turn.` : "AI is trapped and must skip its turn.");
+            switchTurn();
+        }
+    } finally {
+        setAiThinking(false);
+    }
+  }, [gameState, gameMode, currentPlayerId, winner, players, walls, difficulty, aiType, handleMove, handlePlaceWall, isValidMove, isValidWallPlacement, switchTurn]);
+
   useEffect(() => {
     if(gameState === GameState.PLAYING && gameMode === GameMode.PVC && currentPlayerId === 2 && !winner && !aiThinking) {
       const timer = setTimeout(() => {
@@ -256,13 +292,10 @@ const useGameLogic = () => {
     }
   }, [currentPlayerId, gameState, gameMode, winner, executeAiMove, aiThinking]);
 
-  // Game timers
   useEffect(() => {
     let gameInterval: number | undefined;
     if (gameState === GameState.PLAYING) {
-      gameInterval = window.setInterval(() => {
-        setGameTime(prev => prev + 1);
-      }, 1000);
+      gameInterval = window.setInterval(() => setGameTime(prev => prev + 1), 1000);
     }
     return () => clearInterval(gameInterval);
   }, [gameState]);
@@ -271,32 +304,31 @@ const useGameLogic = () => {
     let turnInterval: number | undefined;
     if (gameState === GameState.PLAYING) {
       turnInterval = window.setInterval(() => {
-        setTurnTime(prev => {
-          if (prev <= 1) {
-            clearInterval(turnInterval);
-            // The timeout logic effect will handle the game over state
-            return 0;
-          }
-          return prev - 1;
-        });
+        setTurnTime(prev => (prev <= 1 ? 0 : prev - 1));
       }, 1000);
     }
     return () => clearInterval(turnInterval);
   }, [gameState, currentPlayerId]);
 
-  // Timeout logic
   useEffect(() => {
     if (gameState === GameState.PLAYING && turnTime <= 0) {
-      const winnerPlayer = players[currentPlayerId === 1 ? 2 : 1];
-      setWinner(winnerPlayer);
+      setWinner(players[currentPlayerId === 1 ? 2 : 1]);
       setGameState(GameState.GAME_OVER);
     }
   }, [turnTime, gameState, players, currentPlayerId]);
+  
+  const togglePlacingWall = () => {
+    setIsPlacingWall(prev => !prev);
+    setSelectedPiece(null);
+    setValidMoves([]);
+    setWallPlacementError(null);
+  };
 
-  const startGame = (mode: GameMode, diff: Difficulty, p1Name: string) => {
+  const startGame = (mode: GameMode, diff: Difficulty, p1Name: string, type: AiType) => {
     setGameMode(mode);
     setDifficulty(diff);
-    initializeGame(mode, p1Name);
+    setAiType(type);
+    initializeGame(mode, p1Name, type);
   }
 
   const returnToMenu = () => {
@@ -304,29 +336,12 @@ const useGameLogic = () => {
   }
 
   return {
-    gameState,
-    gameMode,
-    difficulty,
-    players,
-    walls,
-    currentPlayerId,
-    winner,
-    selectedPiece,
-    validMoves,
-    isPlacingWall,
-    aiThinking,
-    lastAiAction,
-    gameTime,
-    turnTime,
-    startGame,
-    handlePieceClick,
-    handleCellClick: handleMove,
-    handleWallClick: handlePlaceWall,
-    togglePlacingWall: () => {
-        setIsPlacingWall(prev => !prev);
-        setSelectedPiece(null);
-        setValidMoves([]);
-    },
+    gameState, gameMode, difficulty, aiType, players, walls, currentPlayerId, winner,
+    selectedPiece, validMoves, isPlacingWall, aiThinking, lastAiAction, apiError,
+    gameTime, turnTime, showRateLimitModal, wallPlacementError,
+    setShowRateLimitModal,
+    startGame, handlePieceClick, handleCellClick: handleMove, handleWallClick: handlePlaceWall,
+    togglePlacingWall,
     returnToMenu,
   };
 };

@@ -1,6 +1,7 @@
 import React from 'react';
 import { BOARD_SIZE } from '../constants';
 import type { Player, Position, Wall } from '../types';
+import { WallPlacementGuide } from './WallPlacementGuide';
 
 type GameBoardProps = {
   players: { [key: number]: Player };
@@ -16,63 +17,6 @@ type GameBoardProps = {
 
 const WALL_THICKNESS = 6; // in pixels
 const GRID_GAP = 5; // in pixels
-
-type WallPlaceholderProps = {
-  wall: Omit<Wall, 'playerId'>;
-  playerColor: string;
-  existingWalls: Wall[];
-  onWallClick: (wall: Omit<Wall, 'playerId'>) => void;
-};
-
-const WallPlaceholder: React.FC<WallPlaceholderProps> = ({ wall, playerColor, existingWalls, onWallClick }) => {
-  const isHorizontal = wall.orientation === 'horizontal';
-
-  const isInvalidPlacement = existingWalls.some(w => {
-    if (w.r === wall.r && w.c === wall.c && w.orientation === wall.orientation) return true;
-    if (isHorizontal) {
-      if (w.orientation === 'horizontal' && w.r === wall.r && Math.abs(w.c - wall.c) < 2) return true;
-      if (w.orientation === 'vertical' && w.r === wall.r - 1 && w.c === wall.c + 1) return true;
-    } else {
-      if (w.orientation === 'vertical' && w.c === wall.c && Math.abs(w.r - wall.r) < 2) return true;
-      if (w.orientation === 'horizontal' && w.r === wall.r + 1 && w.c === wall.c - 1) return true;
-    }
-    return false;
-  });
-
-  if (isInvalidPlacement) return null;
-
-  const lineContainerStyle: React.CSSProperties = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    width: '100%',
-    height: '100%',
-    flexDirection: isHorizontal ? 'column' : 'row',
-  };
-
-  const lineStyle: React.CSSProperties = {
-    borderRadius: '9999px',
-    transition: 'background-color 0.2s ease-in-out',
-    ...(isHorizontal ? { height: '2px', width: '100%' } : { width: '2px', height: '100%' }),
-  };
-
-  return (
-    <div
-      className="absolute group cursor-pointer"
-      style={{
-        top: isHorizontal ? `calc(${wall.r * (100 / BOARD_SIZE)}% - ${WALL_THICKNESS / 2}px - ${GRID_GAP / 2}px)` : `calc(${wall.r * (100 / BOARD_SIZE)}% + ${GRID_GAP / 2}px)`,
-        left: isHorizontal ? `calc(${wall.c * (100 / BOARD_SIZE)}% + ${GRID_GAP / 2}px)` : `calc(${wall.c * (100 / BOARD_SIZE)}% - ${WALL_THICKNESS / 2}px - ${GRID_GAP / 2}px)`,
-        width: isHorizontal ? `calc(2 * (100 / BOARD_SIZE)% - ${GRID_GAP}px)` : `${WALL_THICKNESS}px`,
-        height: isHorizontal ? `${WALL_THICKNESS}px` : `calc(2 * (100 / BOARD_SIZE)% - ${GRID_GAP}px)`,
-        pointerEvents: 'auto',
-        zIndex: 30,
-      }}
-      onClick={() => onWallClick(wall)}
-      aria-label={`Place ${wall.orientation} wall at ${wall.r}, ${wall.c}`}
-    >
-        <div className="relative w-full h-full opacity-0 group-hover:opacity-100 transition-opacity" style={{ backgroundColor: playerColor, borderRadius: '4px' }}></div>
-    </div>
-  );
-};
 
 const GameBoard: React.FC<GameBoardProps> = ({
   players,
@@ -104,7 +48,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
       (isPlayer1Here || isPlayer2Here) && !isPlacingWall && ((isPlayer1Here && currentPlayerId === 1) || (isPlayer2Here && currentPlayerId === 2)) ? 'cursor-pointer' : '',
     ].join(' ');
     
-    // --- New Wall Rendering Logic ---
+    // --- Wall Rendering via Borders ---
     const cellWallStyles: React.CSSProperties = { boxSizing: 'border-box' };
     const wallThicknessPx = `${WALL_THICKNESS}px`;
     
@@ -119,7 +63,6 @@ const GameBoard: React.FC<GameBoardProps> = ({
     if (wallLeft) {
         cellWallStyles.borderLeft = `${wallThicknessPx} solid ${players[wallLeft.playerId]?.color || '#111827'}`;
     }
-    // --- End of New Logic ---
 
     const playerPiece = (player: Player, isSelectedFlag: boolean) => (
       <div
@@ -176,24 +119,12 @@ const GameBoard: React.FC<GameBoardProps> = ({
           renderCell(Math.floor(i / BOARD_SIZE), i % BOARD_SIZE)
         )}
         
-        {/* Wall Placeholders are rendered on top */}
         {isPlacingWall && currentPlayerColor && (
-          <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 20 }}>
-              {/* Horizontal */}
-              {Array.from({ length: (BOARD_SIZE) * (BOARD_SIZE - 1) }).map((_, i) => {
-                const r = Math.floor(i / (BOARD_SIZE - 1)) + 1;
-                const c = i % (BOARD_SIZE - 1);
-                if (r >= BOARD_SIZE) return null;
-                return <WallPlaceholder key={`h-wall-${r}-${c}`} wall={{ r, c, orientation: 'horizontal' }} playerColor={currentPlayerColor} existingWalls={walls} onWallClick={onWallClick} />;
-              })}
-              {/* Vertical */}
-              {Array.from({ length: (BOARD_SIZE - 1) * (BOARD_SIZE) }).map((_, i) => {
-                const r = i % (BOARD_SIZE - 1);
-                const c = Math.floor(i / (BOARD_SIZE - 1)) + 1;
-                 if (c >= BOARD_SIZE) return null;
-                return <WallPlaceholder key={`v-wall-${r}-${c}`} wall={{ r, c, orientation: 'vertical' }} playerColor={currentPlayerColor} existingWalls={walls} onWallClick={onWallClick} />;
-              })}
-          </div>
+          <WallPlacementGuide 
+            playerColor={currentPlayerColor}
+            existingWalls={walls}
+            onWallClick={onWallClick}
+          />
         )}
       </div>
     </div>
