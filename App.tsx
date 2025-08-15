@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect } from 'react';
 import useGameLogic from './hooks/useGameLogic';
 import GameBoard from './components/GameBoard';
@@ -23,12 +24,13 @@ const App: React.FC = () => {
         gameState, gameMode, difficulty, aiType, players, walls, currentPlayerId, winner,
         selectedPiece, validMoves, isPlacingWall, aiThinking, lastAiAction, apiError, gameTime, turnTime,
         showRateLimitModal, wallPlacementError, setShowRateLimitModal, configuredTurnTime, startPosition,
-        wallPreview,
+        wallPreview, onlineGameId, onlinePlayerId, onlineRequestTimeout,
         startGame, handleCellClick, handleWallPreview, confirmWallPlacement, cancelWallPlacement,
-        togglePlacingWall, returnToMenu,
+        togglePlacingWall, returnToMenu, handleCreateOnlineGame, handleJoinOnlineGame, handleFindMatch, handleCancelFindMatch, handleCancelCreateGame,
     } = useGameLogic();
 
-    const [selectedMode, setSelectedMode] = useState<GameMode>(GameMode.PVC);
+    type MenuScreen = 'main' | 'local_setup' | 'online_setup';
+    const [menuScreen, setMenuScreen] = useState<MenuScreen>('main');
     const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>(Difficulty.MEDIUM);
     const [selectedAiType, setSelectedAiType] = useState<AiType>(AiType.LOCAL);
     const [playerName, setPlayerName] = useState('Player 1');
@@ -37,15 +39,18 @@ const App: React.FC = () => {
     const [errorToast, setErrorToast] = useState<string | null>(null);
     const [selectedStartPosition, setSelectedStartPosition] = useState<StartPosition>(StartPosition.CENTER);
     const [showHelp, setShowHelp] = useState(false);
-
-    const minTime = selectedMode === GameMode.PVC && selectedAiType === AiType.GEMINI ? 60 : 30;
-
+    const [joinGameId, setJoinGameId] = useState('');
+    
     useEffect(() => {
-        if (turnDuration < minTime) {
-            setTurnDuration(minTime);
-        }
-    }, [selectedMode, selectedAiType, turnDuration, minTime]);
+        const storedName = sessionStorage.getItem('playerName');
+        if (storedName) setPlayerName(storedName);
+    }, []);
 
+    const handlePlayerNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setPlayerName(e.target.value);
+        sessionStorage.setItem('playerName', e.target.value);
+    };
+    
     useEffect(() => {
         if (lastAiAction?.reasoning) {
             setAiMessage(lastAiAction.reasoning);
@@ -63,90 +68,55 @@ const App: React.FC = () => {
         }
     }, [apiError, wallPlacementError]);
 
+    const renderMenu = () => {
+        switch(menuScreen) {
+            case 'main':
+                return (
+                    <div className="space-y-6">
+                        <div>
+                            <h1 className="text-4xl font-bold text-center mb-2 text-gray-800">Maze Race</h1>
+                            <p className="text-gray-500 text-center">A strategic game of wits and walls.</p>
+                        </div>
+                         <div>
+                             <label htmlFor="playerName" className="text-lg font-semibold mb-2 text-gray-600 block">Your Name</label>
+                             <input type="text" id="playerName" value={playerName} onChange={handlePlayerNameChange} className="w-full p-3 rounded-lg bg-gray-200 border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 transition" placeholder="Enter your name" />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <button onClick={() => setMenuScreen('local_setup')} className="p-4 rounded-lg font-bold transition-all bg-blue-500 text-white shadow-lg hover:bg-blue-600">Local Game</button>
+                            <button onClick={() => setMenuScreen('online_setup')} className="p-4 rounded-lg font-bold transition-all bg-pink-500 text-white shadow-lg hover:bg-pink-600">Online Game</button>
+                        </div>
+                        <button onClick={() => setShowHelp(true)} className="w-full bg-gray-500 text-white font-bold py-3 rounded-lg hover:bg-gray-600 transition-all shadow-md text-lg">How to Play</button>
+                        <p className="text-xs text-gray-400 text-center pt-2">Version 2.0</p>
+                    </div>
+                );
+            case 'local_setup':
+                return (
+                    <LocalGameSetup 
+                      playerName={playerName}
+                      onStartGame={(mode, diff, p1Name, type, duration, startPos) => startGame(mode, diff, p1Name, type, duration, startPos)}
+                      onBack={() => setMenuScreen('main')}
+                    />
+                );
+            case 'online_setup':
+                return (
+                    <OnlineGameSetup
+                        playerName={playerName}
+                        onCreateGame={(duration, startPos) => handleCreateOnlineGame(playerName, duration, startPos)}
+                        onJoinGame={(gameId) => handleJoinOnlineGame(gameId, playerName)}
+                        onFindMatch={(duration, startPos) => handleFindMatch(playerName, duration, startPos)}
+                        onBack={() => setMenuScreen('main')}
+                    />
+                );
+        }
+    }
 
     if (gameState === GameState.MENU) {
         return (
             <>
                 {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
                 <div className="min-h-screen flex items-center justify-center p-4 bg-gray-100">
-                    <div className="w-full max-w-md bg-white p-6 md:p-8 rounded-2xl shadow-lg border space-y-6">
-                        <div>
-                            <h1 className="text-4xl font-bold text-center mb-2 text-gray-800">Maze Race</h1>
-                            <p className="text-gray-500 text-center">A strategic game of wits and walls.</p>
-                        </div>
-                        
-                        <div>
-                             <label htmlFor="playerName" className="text-lg font-semibold mb-2 text-gray-600 block">Your Name</label>
-                             <input
-                                type="text"
-                                id="playerName"
-                                value={playerName}
-                                onChange={(e) => setPlayerName(e.target.value)}
-                                className="w-full p-3 rounded-lg bg-gray-200 border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                                placeholder="Enter your name"
-                             />
-                        </div>
-                        
-                        <div>
-                            <h2 className="text-lg font-semibold mb-3 text-gray-600">Game Mode</h2>
-                            <div className="flex gap-4">
-                                <button onClick={() => setSelectedMode(GameMode.PVP)} className={`w-full p-4 rounded-lg font-bold transition-all ${selectedMode === GameMode.PVP ? 'bg-blue-500 text-white shadow-lg scale-105' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Player vs Player</button>
-                                <button onClick={() => setSelectedMode(GameMode.PVC)} className={`w-full p-4 rounded-lg font-bold transition-all ${selectedMode === GameMode.PVC ? 'bg-pink-500 text-white shadow-lg scale-105' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Player vs AI</button>
-                            </div>
-                        </div>
-
-                        {selectedMode === GameMode.PVC && (
-                            <div className="space-y-6">
-                                <div>
-                                    <h2 className="text-lg font-semibold mb-3 text-gray-600">AI Type</h2>
-                                    <div className="flex gap-4">
-                                        <button onClick={() => setSelectedAiType(AiType.LOCAL)} className={`w-full p-3 rounded-lg font-bold transition-all ${selectedAiType === AiType.LOCAL ? 'bg-gray-800 text-white shadow-lg' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Local AI (Offline)</button>
-                                        <button onClick={() => setSelectedAiType(AiType.GEMINI)} className={`w-full p-3 rounded-lg font-bold transition-all ${selectedAiType === AiType.GEMINI ? 'bg-purple-500 text-white shadow-lg' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Gemini AI</button>
-                                    </div>
-                                </div>
-                                <div>
-                                    <h2 className="text-lg font-semibold mb-3 text-gray-600">AI Difficulty</h2>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {Object.values(Difficulty).map(d => (
-                                             <button key={d} onClick={() => setSelectedDifficulty(d)} className={`p-3 rounded-lg font-semibold transition-all text-sm ${selectedDifficulty === d ? 'bg-gray-600 text-white ring-2 ring-pink-500' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>{d}</button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                        
-                        <div>
-                            <h2 className="text-lg font-semibold mb-3 text-gray-600">Starting Position</h2>
-                            <div className="flex gap-4">
-                                <button onClick={() => setSelectedStartPosition(StartPosition.CENTER)} className={`w-full p-4 rounded-lg font-bold transition-all ${selectedStartPosition === StartPosition.CENTER ? 'bg-blue-500 text-white shadow-lg scale-105' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Center</button>
-                                <button onClick={() => setSelectedStartPosition(StartPosition.RANDOM)} className={`w-full p-4 rounded-lg font-bold transition-all ${selectedStartPosition === StartPosition.RANDOM ? 'bg-pink-500 text-white shadow-lg scale-105' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Random</button>
-                            </div>
-                        </div>
-
-                        <div>
-                             <label htmlFor="turnTime" className="text-lg font-semibold mb-2 text-gray-600 block">Time Per Move (seconds)</label>
-                             <input
-                                type="number"
-                                id="turnTime"
-                                value={turnDuration}
-                                min={minTime}
-                                step="15"
-                                onChange={(e) => setTurnDuration(Math.max(minTime, Number(e.target.value)))}
-                                className="w-full p-3 rounded-lg bg-gray-200 border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                             />
-                             <p className="text-xs text-gray-500 mt-1">Minimum: {minTime} seconds.</p>
-                        </div>
-                        
-                        <div className="flex flex-col gap-4">
-                             <button onClick={() => setShowHelp(true)} className="w-full bg-gray-500 text-white font-bold py-3 rounded-lg hover:bg-gray-600 transition-all shadow-md text-lg">
-                                How to Play
-                            </button>
-                            <button onClick={() => startGame(selectedMode, selectedDifficulty, playerName, selectedAiType, turnDuration, selectedStartPosition)} className="w-full bg-green-500 text-white font-bold py-4 rounded-lg hover:bg-green-600 transition-all shadow-lg text-xl transform hover:scale-105">
-                                Start Game
-                            </button>
-                        </div>
-
-                        <p className="text-xs text-gray-400 text-center pt-2">Version 1.0</p>
+                    <div className="w-full max-w-md bg-white p-6 md:p-8 rounded-2xl shadow-lg border">
+                        {renderMenu()}
                     </div>
                 </div>
             </>
@@ -154,17 +124,20 @@ const App: React.FC = () => {
     }
     
     const currentPlayer = players[currentPlayerId];
+    const opponentPlayer = players[currentPlayerId === 1 ? 2 : 1];
+    const isMyTurnOnline = gameMode === GameMode.PVO && currentPlayerId === onlinePlayerId;
+    const canInteract = gameMode !== GameMode.PVO || isMyTurnOnline;
+    
     const turnTimeColor = !currentPlayer ? 'text-gray-700' : (currentPlayer.id === 1 ? 'text-blue-500' : 'text-pink-500');
     const turnTimeClasses = `text-2xl font-bold transition-colors ${turnTime <= 10 ? 'text-red-500 animate-pulse' : turnTimeColor}`;
     const aiPlayerName = players[2]?.name || 'AI';
 
     return (
         <main className="h-screen max-h-[100dvh] w-full bg-gray-100 flex flex-col items-center p-2 sm:p-4">
-            {/* Header: Opponent Info and Game Time */}
             <header className="w-full max-w-2xl flex-shrink-0">
                  <div className="flex justify-between items-center w-full">
                     <div className="relative">
-                        {players[2] && <PlayerInfo player={players[2]} />}
+                        {opponentPlayer && <PlayerInfo player={opponentPlayer} />}
                         {gameMode === GameMode.PVC && aiMessage && <AiChatTooltip message={aiMessage} />}
                     </div>
                     <div className="text-center">
@@ -174,7 +147,6 @@ const App: React.FC = () => {
                 </div>
             </header>
 
-            {/* Main Content: Turn Indicator and Game Board */}
             <div className="w-full flex-grow flex flex-col items-center justify-center py-1">
                 {currentPlayer && <TurnIndicator player={currentPlayer} />}
                 <div className="w-full">
@@ -193,46 +165,26 @@ const App: React.FC = () => {
                 </div>
             </div>
 
-            {/* Footer: Player Info, Turn Time, and Controls */}
             <footer className="w-full max-w-2xl flex-shrink-0">
                 <div className="flex justify-between items-center w-full">
                     <div className="text-center">
                         <p className="text-sm font-medium text-gray-500">TURN TIME</p>
                         <p className={turnTimeClasses}>{formatTime(turnTime)}</p>
                     </div>
-                    {players[1] && <PlayerInfo player={players[1]} />}
+                    {players[onlinePlayerId || 1] && <PlayerInfo player={players[onlinePlayerId || 1]} />}
                 </div>
 
                 {wallPreview ? (
                      <div className="flex w-full space-x-4 mt-4">
-                         <button 
-                            onClick={cancelWallPlacement}
-                            className="w-full py-3 rounded-lg font-bold text-white bg-red-500 hover:bg-red-600 transition-all shadow-md"
-                          >
-                            Cancel
-                         </button>
-                         <button 
-                            onClick={confirmWallPlacement}
-                            className="w-full py-3 rounded-lg font-bold text-white bg-green-500 hover:bg-green-600 transition-all shadow-md"
-                          >
-                            Confirm Wall
-                         </button>
+                         <button onClick={cancelWallPlacement} className="w-full py-3 rounded-lg font-bold text-white bg-red-500 hover:bg-red-600 transition-all shadow-md">Cancel</button>
+                         <button onClick={confirmWallPlacement} className="w-full py-3 rounded-lg font-bold text-white bg-green-500 hover:bg-green-600 transition-all shadow-md">Confirm Wall</button>
                     </div>
                 ) : (
                     <div className="flex w-full space-x-4 mt-4">
-                         <button 
-                            onClick={togglePlacingWall} 
-                            disabled={!currentPlayer || currentPlayer.wallsLeft === 0 || (gameMode === GameMode.PVC && currentPlayerId === 2)}
-                            className={`w-full py-3 rounded-lg font-bold text-white transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${isPlacingWall ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'}`}
-                          >
-                            {isPlacingWall ? 'Cancel Placing' : 'Place Wall'}
+                         <button onClick={togglePlacingWall} disabled={!currentPlayer || currentPlayer.wallsLeft === 0 || !canInteract} className={`w-full py-3 rounded-lg font-bold text-white transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${isPlacingWall ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'}`}>
+                            {isPlacingWall ? 'Cancel' : 'Place Wall'}
                          </button>
-                         <button 
-                            onClick={returnToMenu}
-                            className="w-full py-3 rounded-lg font-bold text-gray-700 bg-gray-300 hover:bg-gray-400 transition-all shadow-md"
-                          >
-                            New Game
-                         </button>
+                         <button onClick={returnToMenu} className="w-full py-3 rounded-lg font-bold text-gray-700 bg-gray-300 hover:bg-gray-400 transition-all shadow-md">New Game</button>
                     </div>
                 )}
             </footer>
@@ -243,33 +195,31 @@ const App: React.FC = () => {
                         <h3 className={`text-3xl font-bold mb-2`} style={{color: winner.color}}>{winner.name} wins!</h3>
                         { turnTime <= 0 && <p className="text-gray-600 mb-4">The other player ran out of time.</p>}
                         <div className="flex flex-col gap-4">
-                            <button onClick={() => startGame(gameMode, difficulty, players[1].name, aiType, configuredTurnTime, startPosition)} className="w-full bg-green-500 text-white font-bold py-3 rounded-lg hover:bg-green-600 transition-all">Play Again</button>
+                           { gameMode !== GameMode.PVO && <button onClick={() => startGame(gameMode, difficulty, players[1].name, aiType, configuredTurnTime, startPosition)} className="w-full bg-green-500 text-white font-bold py-3 rounded-lg hover:bg-green-600 transition-all">Play Again</button>}
                             <button onClick={returnToMenu} className="w-full bg-gray-600 text-white font-bold py-3 rounded-lg hover:bg-gray-500 transition-all">Main Menu</button>
                         </div>
                     </div>
                 </Modal>
             )}
+            {gameState === GameState.ONLINE_WAITING && (
+                <WaitingForOpponentModal 
+                    gameId={onlineGameId} 
+                    hasTimeout={!!onlineRequestTimeout} 
+                    onCancelSearch={handleCancelFindMatch} 
+                    onCancelCreateGame={handleCancelCreateGame}
+                />
+            )}
             {showRateLimitModal && (
                  <Modal title="Gemini API Limit Reached" onClose={() => setShowRateLimitModal(false)}>
                     <div className="text-center space-y-4">
-                        <p className="text-gray-600">
-                            You've exceeded the request limit for the Gemini AI. The AI will make a simple move to continue.
-                        </p>
-                        <p className="text-gray-600 font-medium">
-                            For an uninterrupted experience, we recommend starting a new game with the offline <span className="font-bold text-gray-800">Local AI</span>.
-                        </p>
-                        <button onClick={() => setShowRateLimitModal(false)} className="w-full bg-blue-500 text-white font-bold py-3 rounded-lg hover:bg-blue-600 transition-all">
-                            OK
-                        </button>
+                        <p className="text-gray-600">You've exceeded the request limit. The AI will make a simple move. For an uninterrupted experience, try the offline <span className="font-bold text-gray-800">Local AI</span>.</p>
+                        <button onClick={() => setShowRateLimitModal(false)} className="w-full bg-blue-500 text-white font-bold py-3 rounded-lg hover:bg-blue-600 transition-all">OK</button>
                     </div>
                 </Modal>
             )}
             {aiThinking && (
                 <div className="fixed top-4 right-4 bg-white p-3 rounded-full shadow-lg flex items-center gap-3 z-50">
-                   <svg className="animate-spin h-5 w-5 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
+                   <svg className="animate-spin h-5 w-5 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                     <span className="font-semibold text-gray-600">{aiPlayerName} is thinking...</span>
                 </div>
             )}
@@ -279,18 +229,167 @@ const App: React.FC = () => {
                     <span className="font-semibold">{errorToast}</span>
                 </div>
             )}
-            <style>
-            {`
-              @keyframes fade-in-down {
-                0% { opacity: 0; transform: translateY(-20px) translateX(-50%); }
-                100% { opacity: 1; transform: translateY(0) translateX(-50%); }
-              }
-              .animate-fade-in-down {
-                animation: fade-in-down 0.5s ease-out forwards;
-              }
-            `}
-            </style>
+            <style>{`@keyframes fade-in-down{0%{opacity:0;transform:translateY(-20px) translateX(-50%)}100%{opacity:1;transform:translateY(0) translateX(-50%)}}.animate-fade-in-down{animation:fade-in-down .5s ease-out forwards}`}</style>
         </main>
+    );
+};
+
+// --- Menu Components ---
+
+const WaitingForOpponentModal: React.FC<{
+    gameId: string | null; 
+    hasTimeout: boolean;
+    onCancelSearch?: () => void;
+    onCancelCreateGame?: () => void;
+}> = ({ gameId, hasTimeout, onCancelSearch, onCancelCreateGame }) => {
+    const [copied, setCopied] = useState(false);
+    const joinUrl = gameId ? `${window.location.origin}?join=${gameId}` : '';
+    const isFindingMatch = !gameId && hasTimeout;
+    const initialTime = isFindingMatch ? 3 * 60 : 5 * 60;
+    const [timeLeft, setTimeLeft] = useState(initialTime);
+
+    useEffect(() => {
+        if (!hasTimeout || timeLeft <= 0) return;
+        const timerId = setInterval(() => {
+            setTimeLeft(prev => prev - 1);
+        }, 1000);
+        return () => clearInterval(timerId);
+    }, [hasTimeout, timeLeft]);
+
+    const handleCopy = () => {
+        if (!joinUrl) return;
+        navigator.clipboard.writeText(joinUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    const title = gameId ? 'Waiting for Opponent...' : 'Finding Match...';
+    
+    return (
+        <Modal title={title}>
+            <div className="text-center space-y-4">
+                <svg className="animate-spin h-10 w-10 text-gray-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                
+                {isFindingMatch ? (
+                    <p className="text-gray-600">Searching for another player. This may take a moment.</p>
+                ) : (
+                    <p className="text-gray-600">Share this link with a friend to invite them to the game.</p>
+                )}
+
+                {gameId && (
+                    <div className="flex items-center space-x-2">
+                        <input type="text" readOnly value={joinUrl} className="w-full p-2 rounded-lg bg-gray-200 border text-sm" />
+                        <button onClick={handleCopy} className="p-2 rounded-lg bg-blue-500 text-white font-bold hover:bg-blue-600 transition-all text-sm w-24">{copied ? 'Copied!' : 'Copy'}</button>
+                    </div>
+                )}
+                {hasTimeout && timeLeft > 0 && (
+                    <p className="text-sm text-gray-500">
+                        {isFindingMatch ? 'Search will time out in' : 'Link will expire in'}: <span className="font-bold">{formatTime(timeLeft)}</span>
+                    </p>
+                )}
+                 {isFindingMatch && onCancelSearch && (
+                    <button 
+                        onClick={onCancelSearch} 
+                        className="w-full mt-2 py-2 rounded-lg font-bold text-white bg-red-500 hover:bg-red-600 transition-all shadow-md"
+                    >
+                        Cancel Search
+                    </button>
+                )}
+                 {gameId && onCancelCreateGame && (
+                    <button 
+                        onClick={onCancelCreateGame} 
+                        className="w-full mt-2 py-2 rounded-lg font-bold text-white bg-red-500 hover:bg-red-600 transition-all shadow-md"
+                    >
+                        Cancel Game
+                    </button>
+                )}
+            </div>
+        </Modal>
+    )
+}
+
+const LocalGameSetup: React.FC<{ playerName: string; onStartGame: Function; onBack: () => void; }> = (props) => {
+    const [mode, setMode] = useState<GameMode>(GameMode.PVC);
+    const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.MEDIUM);
+    const [aiType, setAiType] = useState<AiType>(AiType.LOCAL);
+    const [startPos, setStartPos] = useState<StartPosition>(StartPosition.CENTER);
+    const [duration, setDuration] = useState(60);
+    const minTime = mode === GameMode.PVC && aiType === AiType.GEMINI ? 60 : 30;
+
+    useEffect(() => { if (duration < minTime) setDuration(minTime); }, [mode, aiType, duration, minTime]);
+
+    return (
+      <div className="space-y-4 animate-fade-in-down">
+          <button onClick={props.onBack} className="text-sm font-semibold text-gray-600 hover:text-black">{'< Back'}</button>
+          <h2 className="text-2xl font-bold text-center text-gray-800">Local Game Setup</h2>
+          <div className="flex gap-4">
+              <button onClick={() => setMode(GameMode.PVP)} className={`w-full p-3 rounded-lg font-bold T ${mode === GameMode.PVP ? 'bg-blue-500 text-white scale-105' : 'bg-gray-200 hover:bg-gray-300'}`}>Player vs Player</button>
+              <button onClick={() => setMode(GameMode.PVC)} className={`w-full p-3 rounded-lg font-bold T ${mode === GameMode.PVC ? 'bg-pink-500 text-white scale-105' : 'bg-gray-200 hover:bg-gray-300'}`}>Player vs AI</button>
+          </div>
+          {mode === GameMode.PVC && (
+              <div className="space-y-4">
+                  <div>
+                      <h3 className="font-semibold text-gray-600 mb-2">AI Type</h3>
+                      <div className="flex gap-4">
+                          <button onClick={() => setAiType(AiType.LOCAL)} className={`w-full p-3 rounded-lg font-bold T ${aiType === AiType.LOCAL ? 'bg-gray-800 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}>Local (Offline)</button>
+                          <button onClick={() => setAiType(AiType.GEMINI)} className={`w-full p-3 rounded-lg font-bold T ${aiType === AiType.GEMINI ? 'bg-purple-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}>Gemini AI</button>
+                      </div>
+                  </div>
+                  <div>
+                      <h3 className="font-semibold text-gray-600 mb-2">AI Difficulty</h3>
+                      <div className="grid grid-cols-3 gap-2">
+                          {Object.values(Difficulty).map(d => (<button key={d} onClick={() => setDifficulty(d)} className={`p-2 rounded-lg font-semibold T text-sm ${difficulty === d ? 'bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}>{d}</button>))}
+                      </div>
+                  </div>
+              </div>
+          )}
+          <div>
+              <h3 className="font-semibold text-gray-600 mb-2">Starting Position</h3>
+              <div className="flex gap-4">
+                  <button onClick={() => setStartPos(StartPosition.CENTER)} className={`w-full p-3 rounded-lg font-bold T ${startPos === StartPosition.CENTER ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}>Center</button>
+                  <button onClick={() => setStartPos(StartPosition.RANDOM)} className={`w-full p-3 rounded-lg font-bold T ${startPos === StartPosition.RANDOM ? 'bg-pink-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}>Random</button>
+              </div>
+          </div>
+          <div>
+              <label htmlFor="turnTime" className="font-semibold text-gray-600 block mb-2">Time Per Move (seconds)</label>
+              <input type="number" id="turnTime" value={duration} min={minTime} step="15" onChange={(e) => setDuration(Math.max(minTime, Number(e.target.value)))} className="w-full p-3 rounded-lg bg-gray-200" />
+              <p className="text-xs text-gray-500 mt-1">Minimum: {minTime} seconds.</p>
+          </div>
+          <button onClick={() => props.onStartGame(mode, difficulty, props.playerName, aiType, duration, startPos)} className="w-full bg-green-500 text-white font-bold py-4 rounded-lg hover:bg-green-600 T shadow-lg text-xl">Start Game</button>
+      </div>
+    );
+}
+
+const OnlineGameSetup: React.FC<{ playerName: string; onCreateGame: Function; onJoinGame: Function; onFindMatch: Function; onBack: () => void; }> = (props) => {
+    const [joinGameId, setJoinGameId] = useState('');
+    const [startPos, setStartPos] = useState<StartPosition>(StartPosition.CENTER);
+    const [duration, setDuration] = useState(60);
+
+    return (
+       <div className="space-y-4 animate-fade-in-down">
+           <button onClick={props.onBack} className="text-sm font-semibold text-gray-600 hover:text-black">{'< Back'}</button>
+           <h2 className="text-2xl font-bold text-center text-gray-800">Online Multiplayer</h2>
+           <div>
+              <h3 className="font-semibold text-gray-600 mb-2">Game Options</h3>
+              <div className="space-y-3">
+                  <label htmlFor="turnTimeOnline" className="text-gray-600 block">Time Per Move: {duration}s</label>
+                  <input type="range" id="turnTimeOnline" value={duration} min="30" max="120" step="15" onChange={(e) => setDuration(Number(e.target.value))} className="w-full" />
+                  <div className="flex gap-4">
+                      <button onClick={() => setStartPos(StartPosition.CENTER)} className={`w-full p-3 rounded-lg font-bold T ${startPos === StartPosition.CENTER ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}>Center Start</button>
+                      <button onClick={() => setStartPos(StartPosition.RANDOM)} className={`w-full p-3 rounded-lg font-bold T ${startPos === StartPosition.RANDOM ? 'bg-pink-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`}>Random Start</button>
+                  </div>
+              </div>
+           </div>
+           <div className="space-y-4 pt-4 border-t">
+               <button onClick={() => props.onFindMatch(duration, startPos)} className="w-full bg-purple-500 text-white font-bold py-3 rounded-lg hover:bg-purple-600 T">Find Random Match</button>
+               <div className="text-center text-gray-500">OR</div>
+               <button onClick={() => props.onCreateGame(duration, startPos)} className="w-full bg-green-500 text-white font-bold py-3 rounded-lg hover:bg-green-600 T">Create Private Game</button>
+               <div className="flex items-center space-x-2">
+                   <input type="text" value={joinGameId} onChange={(e) => setJoinGameId(e.target.value)} className="w-full p-3 rounded-lg bg-gray-200" placeholder="Paste Game ID" />
+                   <button onClick={() => props.onJoinGame(joinGameId)} disabled={!joinGameId} className="p-3 rounded-lg bg-blue-500 text-white font-bold hover:bg-blue-600 T disabled:opacity-50">Join</button>
+               </div>
+           </div>
+       </div>
     );
 };
 

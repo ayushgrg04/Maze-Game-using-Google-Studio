@@ -24,11 +24,13 @@ export enum GameState {
   MENU = 'MENU',
   PLAYING = 'PLAYING',
   GAME_OVER = 'GAME_OVER',
+  ONLINE_WAITING = 'ONLINE_WAITING',
 }
 
 export enum GameMode {
   PVP = 'PVP',
   PVC = 'PVC',
+  PVO = 'PVO',
 }
 
 export enum Difficulty {
@@ -53,3 +55,14 @@ export type AiAction = {
   orientation?: 'horizontal' | 'vertical';
   reasoning: string;
 }
+
+// Data structure for online game state synchronization
+export type OnlineGameData = {
+    players: { [key: number]: Player };
+    walls: Wall[];
+    currentPlayerId: 1 | 2;
+    winner: Player | null;
+    gameTime: number;
+    turnTime: number;
+    // status: 'waiting' | 'active' | 'finished';
+};
