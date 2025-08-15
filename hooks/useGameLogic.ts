@@ -3,15 +3,16 @@ import { useState, useCallback, useEffect } from 'react';
 import { BOARD_SIZE, INITIAL_WALLS } from '../constants';
 import getAiMove from '../services/geminiService';
 import getLocalAiMove from '../services/localAiService';
-import { findShortestPath } from '../utils/pathfinding';
+import { findShortestPath, getPossibleMoves } from '../utils/pathfinding';
 import type { Player, Position, Wall, AiAction } from '../types';
-import { GameState, GameMode, Difficulty, AiType } from '../types';
+import { GameState, GameMode, Difficulty, AiType, StartPosition } from '../types';
 
 const useGameLogic = () => {
   const [gameState, setGameState] = useState<GameState>(GameState.MENU);
   const [gameMode, setGameMode] = useState<GameMode>(GameMode.PVP);
   const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.MEDIUM);
   const [aiType, setAiType] = useState<AiType>(AiType.GEMINI);
+  const [startPosition, setStartPosition] = useState<StartPosition>(StartPosition.CENTER);
   const [players, setPlayers] = useState<{ [key: number]: Player }>({});
   const [walls, setWalls] = useState<Wall[]>([]);
   const [currentPlayerId, setCurrentPlayerId] = useState<1 | 2>(1);
@@ -29,16 +30,20 @@ const useGameLogic = () => {
   const [wallPlacementError, setWallPlacementError] = useState<string | null>(null);
 
 
-  const initializeGame = useCallback((mode: GameMode, p1Name: string = 'Player 1', selectedAiType: AiType, duration: number) => {
+  const initializeGame = useCallback((mode: GameMode, p1Name: string = 'Player 1', selectedAiType: AiType, duration: number, startPos: StartPosition) => {
     let p2Name = 'Player 2';
     if (mode === GameMode.PVC) {
         p2Name = selectedAiType === AiType.GEMINI ? 'Gemini AI' : 'Local AI';
     }
+
+    const p1Col = startPos === StartPosition.CENTER ? Math.floor(BOARD_SIZE / 2) : Math.floor(Math.random() * BOARD_SIZE);
+    const p2Col = startPos === StartPosition.CENTER ? Math.floor(BOARD_SIZE / 2) : Math.floor(Math.random() * BOARD_SIZE);
+    
     const p1: Player = {
       id: 1,
       name: p1Name,
       color: '#3b82f6', // blue-500
-      position: { r: BOARD_SIZE - 1, c: Math.floor(BOARD_SIZE / 2) },
+      position: { r: BOARD_SIZE - 1, c: p1Col },
       wallsLeft: INITIAL_WALLS,
       goalRow: 0,
     };
@@ -46,7 +51,7 @@ const useGameLogic = () => {
       id: 2,
       name: p2Name,
       color: '#ec4899', // pink-500
-      position: { r: 0, c: Math.floor(BOARD_SIZE / 2) },
+      position: { r: 0, c: p2Col },
       wallsLeft: INITIAL_WALLS,
       goalRow: BOARD_SIZE - 1,
     };
@@ -64,46 +69,6 @@ const useGameLogic = () => {
     setConfiguredTurnTime(duration);
     setTurnTime(duration);
   }, []);
-
-    const isValidMove = useCallback((from: Position, to: Position, p1Pos: Position, p2Pos: Position, currentWalls: Wall[]): boolean => {
-    const { r: fromR, c: fromC } = from;
-    const { r: toR, c: toC } = to;
-
-    // Check bounds
-    if (toR < 0 || toR >= BOARD_SIZE || toC < 0 || toC >= BOARD_SIZE) return false;
-
-    // Check for wall collision
-    if (fromR === toR) { // Horizontal move
-        const wallC = Math.min(fromC, toC);
-        if (currentWalls.some(w => w.orientation === 'vertical' && w.c === wallC + 1 && (w.r === fromR || w.r === fromR - 1))) return false;
-    } else { // Vertical move
-        const wallR = Math.min(fromR, toR);
-        if (currentWalls.some(w => w.orientation === 'horizontal' && w.r === wallR + 1 && (w.c === fromC || w.c === fromC - 1))) return false;
-    }
-
-    const otherPlayerPos = (from.r === p1Pos.r && from.c === p1Pos.c) ? p2Pos : p1Pos;
-    
-    const dr = toR - fromR;
-    const dc = toC - fromC;
-
-    // Standard move
-    if (Math.abs(dr) + Math.abs(dc) === 1) {
-        return !(toR === otherPlayerPos.r && toC === otherPlayerPos.c);
-    }
-    
-    // Jump move
-    if (Math.abs(dr) + Math.abs(dc) === 2) {
-        if (!(fromR + dr / 2 === otherPlayerPos.r && fromC + dc / 2 === otherPlayerPos.c)) return false;
-        
-        // Cannot jump over a wall
-        if (!isValidMove(from, otherPlayerPos, p1Pos, p2Pos, currentWalls)) return false;
-
-        return isValidMove(otherPlayerPos, to, p1Pos, p2Pos, currentWalls);
-    }
-
-    return false;
-  }, []);
-
 
   const isValidWallPlacement = useCallback((wall: Wall, currentWalls: Wall[], p1: Player, p2: Player): boolean => {
     const player = p1.id === wall.playerId ? p1 : p2;
@@ -140,12 +105,26 @@ const useGameLogic = () => {
     setWallPlacementError(null);
     setTurnTime(configuredTurnTime);
   }, [configuredTurnTime]);
+
+  const calculateValidMoves = useCallback((pos: Position) => {
+    if (!players[1] || !players[2]) return;
+    const opponentPos = players[currentPlayerId === 1 ? 2 : 1].position;
+    const valid = getPossibleMoves(pos, walls, opponentPos);
+    setValidMoves(valid);
+  }, [players, walls, currentPlayerId]);
   
   const handleMove = useCallback((to: Position, from?: Position) => {
     const fromPos = from || selectedPiece;
     if (!fromPos || !players[1] || !players[2]) return;
 
-    if (isValidMove(fromPos, to, players[1].position, players[2].position, walls)) {
+    // For human clicks, prevent interaction during AI's turn
+    if (!from && gameMode === GameMode.PVC && currentPlayerId === 2) return;
+
+    const opponentPos = players[currentPlayerId === 1 ? 2 : 1].position;
+    const possibleMoves = getPossibleMoves(fromPos, walls, opponentPos);
+    const moveIsValid = possibleMoves.some(move => move.r === to.r && move.c === to.c);
+
+    if (moveIsValid) {
         const updatedPlayers = { ...players };
         updatedPlayers[currentPlayerId].position = to;
         setPlayers(updatedPlayers);
@@ -159,7 +138,7 @@ const useGameLogic = () => {
     }
     setSelectedPiece(null);
     setValidMoves([]);
-  }, [players, walls, selectedPiece, currentPlayerId, isValidMove, switchTurn]);
+  }, [players, walls, selectedPiece, currentPlayerId, switchTurn, gameMode]);
 
   const handlePlaceWall = useCallback((wall: Omit<Wall, 'playerId'>) => {
     if (!players[1] || !players[2]) return;
@@ -188,22 +167,14 @@ const useGameLogic = () => {
     setIsPlacingWall(false);
     switchTurn();
   }, [players, walls, currentPlayerId, isValidWallPlacement, switchTurn]);
-  
-  const calculateValidMoves = useCallback((pos: Position) => {
-    if (!players[1] || !players[2]) return;
-    const { r, c } = pos;
-    let potentialMoves = [{ r: r - 1, c }, { r: r + 1, c }, { r, c: c - 1 }, { r, c: c + 1 }];
-    potentialMoves.push({r:r-2, c:c}, {r:r+2, c:c}, {r:r, c:c-2}, {r:r, c:c+2});
-    const opponentPos = players[currentPlayerId === 1 ? 2: 1].position;
-    if( (Math.abs(pos.r - opponentPos.r) + Math.abs(pos.c - opponentPos.c)) === 1){
-      potentialMoves.push({r:opponentPos.r + (opponentPos.r - pos.r), c:opponentPos.c + (opponentPos.c-pos.c)});
-    }
-    const valid = potentialMoves.filter(move => isValidMove(pos, move, players[1].position, players[2].position, walls));
-    setValidMoves(valid);
-  }, [players, walls, isValidMove, currentPlayerId]);
 
   const handlePieceClick = useCallback((pos: Position) => {
+    // Prevent any piece interaction during the AI's turn
+    if (gameMode === GameMode.PVC && currentPlayerId === 2) return;
+      
     if (isPlacingWall || !players[currentPlayerId]) return;
+    
+    // Only allow clicking on the current player's piece
     if (players[currentPlayerId].position.r === pos.r && players[currentPlayerId].position.c === pos.c) {
         if (selectedPiece) {
             setSelectedPiece(null);
@@ -213,7 +184,7 @@ const useGameLogic = () => {
             calculateValidMoves(pos);
         }
     }
-  }, [isPlacingWall, players, selectedPiece, currentPlayerId, calculateValidMoves]);
+  }, [isPlacingWall, players, selectedPiece, currentPlayerId, calculateValidMoves, gameMode]);
 
   const executeAiMove = useCallback(async () => {
     if (gameState !== GameState.PLAYING || gameMode !== GameMode.PVC || currentPlayerId !== 2 || winner || !players[1] || !players[2]) return;
@@ -236,9 +207,13 @@ const useGameLogic = () => {
         }
         
         setLastAiAction(aiAction);
-
+        
+        const opponentPos = players[1].position;
+        
         if (aiAction.action === 'MOVE') {
-            if (isValidMove(aiPlayer.position, aiAction.position, humanPlayer.position, aiPlayer.position, walls)) {
+            const possibleMoves = getPossibleMoves(aiPlayer.position, walls, opponentPos);
+            const moveIsValid = possibleMoves.some(m => m.r === aiAction.position.r && m.c === aiAction.position.c);
+            if (moveIsValid) {
                 handleMove(aiAction.position, aiPlayer.position);
             } else {
                 console.warn("AI suggested an invalid move:", aiAction);
@@ -273,7 +248,7 @@ const useGameLogic = () => {
           return;
         }
 
-        const fallbackPath = findShortestPath(aiPlayer.position, aiPlayer.goalRow, walls);
+        const fallbackPath = findShortestPath(aiPlayer.position, aiPlayer.goalRow, walls, humanPlayer.position);
         if (fallbackPath && fallbackPath.length > 1) {
             handleMove(fallbackPath[1], aiPlayer.position);
         } else {
@@ -283,7 +258,7 @@ const useGameLogic = () => {
     } finally {
         setAiThinking(false);
     }
-  }, [gameState, gameMode, currentPlayerId, winner, players, walls, difficulty, aiType, handleMove, handlePlaceWall, isValidMove, isValidWallPlacement, switchTurn]);
+  }, [gameState, gameMode, currentPlayerId, winner, players, walls, difficulty, aiType, handleMove, handlePlaceWall, isValidWallPlacement, switchTurn]);
 
   useEffect(() => {
     if(gameState === GameState.PLAYING && gameMode === GameMode.PVC && currentPlayerId === 2 && !winner && !aiThinking) {
@@ -326,11 +301,12 @@ const useGameLogic = () => {
     setWallPlacementError(null);
   };
 
-  const startGame = (mode: GameMode, diff: Difficulty, p1Name: string, type: AiType, duration: number) => {
+  const startGame = (mode: GameMode, diff: Difficulty, p1Name: string, type: AiType, duration: number, startPos: StartPosition) => {
     setGameMode(mode);
     setDifficulty(diff);
     setAiType(type);
-    initializeGame(mode, p1Name, type, duration);
+    setStartPosition(startPos);
+    initializeGame(mode, p1Name, type, duration, startPos);
   }
 
   const returnToMenu = () => {
@@ -341,7 +317,7 @@ const useGameLogic = () => {
     gameState, gameMode, difficulty, aiType, players, walls, currentPlayerId, winner,
     selectedPiece, validMoves, isPlacingWall, aiThinking, lastAiAction, apiError,
     gameTime, turnTime, showRateLimitModal, wallPlacementError,
-    configuredTurnTime,
+    configuredTurnTime, startPosition,
     setShowRateLimitModal,
     startGame, handlePieceClick, handleCellClick: handleMove, handleWallClick: handlePlaceWall,
     togglePlacingWall,

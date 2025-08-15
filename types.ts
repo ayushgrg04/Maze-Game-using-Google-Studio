@@ -42,6 +42,11 @@ export enum AiType {
   LOCAL = 'LOCAL',
 }
 
+export enum StartPosition {
+  CENTER = 'CENTER',
+  RANDOM = 'RANDOM',
+}
+
 export type AiAction = {
   action: 'MOVE' | 'PLACE_WALL';
   position: Position;

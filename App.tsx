@@ -5,7 +5,7 @@ import GameBoard from './components/GameBoard';
 import PlayerInfo from './components/PlayerInfo';
 import Modal from './components/Modal';
 import { AiChatTooltip } from './components/AiChatTooltip';
-import { GameState, GameMode, Difficulty, Player, AiType } from './types';
+import { GameState, GameMode, Difficulty, Player, AiType, StartPosition } from './types';
 
 const TurnIndicator: React.FC<{player: Player}> = ({ player }) => (
     <div className="bg-white rounded-full shadow-md px-4 py-2 flex items-center space-x-3">
@@ -20,7 +20,7 @@ const App: React.FC = () => {
     const {
         gameState, gameMode, difficulty, aiType, players, walls, currentPlayerId, winner,
         selectedPiece, validMoves, isPlacingWall, aiThinking, lastAiAction, apiError, gameTime, turnTime,
-        showRateLimitModal, wallPlacementError, setShowRateLimitModal, configuredTurnTime,
+        showRateLimitModal, wallPlacementError, setShowRateLimitModal, configuredTurnTime, startPosition,
         startGame, handlePieceClick, handleCellClick, handleWallClick, togglePlacingWall, returnToMenu
     } = useGameLogic();
 
@@ -31,6 +31,7 @@ const App: React.FC = () => {
     const [turnDuration, setTurnDuration] = useState(60);
     const [aiMessage, setAiMessage] = useState<string | null>(null);
     const [errorToast, setErrorToast] = useState<string | null>(null);
+    const [selectedStartPosition, setSelectedStartPosition] = useState<StartPosition>(StartPosition.CENTER);
 
     const minTime = selectedMode === GameMode.PVC && selectedAiType === AiType.GEMINI ? 60 : 30;
 
@@ -106,6 +107,14 @@ const App: React.FC = () => {
                             </div>
                         </div>
                     )}
+                    
+                    <div>
+                        <h2 className="text-lg font-semibold mb-3 text-gray-600">Starting Position</h2>
+                        <div className="flex gap-4">
+                            <button onClick={() => setSelectedStartPosition(StartPosition.CENTER)} className={`w-full p-4 rounded-lg font-bold transition-all ${selectedStartPosition === StartPosition.CENTER ? 'bg-blue-500 text-white shadow-lg scale-105' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Center</button>
+                            <button onClick={() => setSelectedStartPosition(StartPosition.RANDOM)} className={`w-full p-4 rounded-lg font-bold transition-all ${selectedStartPosition === StartPosition.RANDOM ? 'bg-pink-500 text-white shadow-lg scale-105' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Random</button>
+                        </div>
+                    </div>
 
                     <div>
                          <label htmlFor="turnTime" className="text-lg font-semibold mb-2 text-gray-600 block">Time Per Move (seconds)</label>
@@ -121,7 +130,7 @@ const App: React.FC = () => {
                          <p className="text-xs text-gray-500 mt-1">Minimum: {minTime} seconds.</p>
                     </div>
                     
-                    <button onClick={() => startGame(selectedMode, selectedDifficulty, playerName, selectedAiType, turnDuration)} className="w-full bg-green-500 text-white font-bold py-4 rounded-lg hover:bg-green-600 transition-all shadow-lg text-xl transform hover:scale-105">
+                    <button onClick={() => startGame(selectedMode, selectedDifficulty, playerName, selectedAiType, turnDuration, selectedStartPosition)} className="w-full bg-green-500 text-white font-bold py-4 rounded-lg hover:bg-green-600 transition-all shadow-lg text-xl transform hover:scale-105">
                         Start Game
                     </button>
                 </div>
@@ -193,7 +202,7 @@ const App: React.FC = () => {
                         <h3 className={`text-3xl font-bold mb-2`} style={{color: winner.color}}>{winner.name} wins!</h3>
                         { turnTime <= 0 && <p className="text-gray-600 mb-4">The other player ran out of time.</p>}
                         <div className="flex flex-col gap-4">
-                            <button onClick={() => startGame(gameMode, difficulty, players[1].name, aiType, configuredTurnTime)} className="w-full bg-green-500 text-white font-bold py-3 rounded-lg hover:bg-green-600 transition-all">Play Again</button>
+                            <button onClick={() => startGame(gameMode, difficulty, players[1].name, aiType, configuredTurnTime, startPosition)} className="w-full bg-green-500 text-white font-bold py-3 rounded-lg hover:bg-green-600 transition-all">Play Again</button>
                             <button onClick={returnToMenu} className="w-full bg-gray-600 text-white font-bold py-3 rounded-lg hover:bg-gray-500 transition-all">Main Menu</button>
                         </div>
                     </div>
