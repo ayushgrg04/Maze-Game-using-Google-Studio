@@ -37,7 +37,8 @@ const useGameLogic = () => {
     }
 
     const p1Col = startPos === StartPosition.CENTER ? Math.floor(BOARD_SIZE / 2) : Math.floor(Math.random() * BOARD_SIZE);
-    const p2Col = startPos === StartPosition.CENTER ? Math.floor(BOARD_SIZE / 2) : Math.floor(Math.random() * BOARD_SIZE);
+    // Ensure symmetrical placement for random starts to maintain fairness
+    const p2Col = startPos === StartPosition.CENTER ? Math.floor(BOARD_SIZE / 2) : (BOARD_SIZE - 1) - p1Col;
     
     const p1: Player = {
       id: 1,

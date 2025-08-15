@@ -133,6 +133,7 @@ const App: React.FC = () => {
                     <button onClick={() => startGame(selectedMode, selectedDifficulty, playerName, selectedAiType, turnDuration, selectedStartPosition)} className="w-full bg-green-500 text-white font-bold py-4 rounded-lg hover:bg-green-600 transition-all shadow-lg text-xl transform hover:scale-105">
                         Start Game
                     </button>
+                    <p className="text-xs text-gray-400 text-center pt-2">Version 1.0</p>
                 </div>
             </div>
         );
