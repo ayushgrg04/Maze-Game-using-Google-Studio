@@ -17,16 +17,45 @@ const isMoveBlocked = (from: Position, to: Position, walls: Wall[]): boolean => 
     }
 };
 
-const getPossibleMoves = (pos: Position, walls: Wall[]): Position[] => {
+const getPossibleMoves = (pos: Position, walls: Wall[], opponentPos: Position): Position[] => {
     const { r, c } = pos;
-    // Note: This simplified version doesn't handle jumps over players.
-    // The core game logic will still validate the chosen move.
+    const moves: Position[] = [];
+
     const potentialMoves = [{ r: r - 1, c }, { r: r + 1, c }, { r, c: c - 1 }, { r, c: c + 1 }];
-    return potentialMoves.filter(move =>
-        move.r >= 0 && move.r < BOARD_SIZE &&
-        move.c >= 0 && move.c < BOARD_SIZE &&
-        !isMoveBlocked(pos, move, walls)
-    );
+
+    for (const move of potentialMoves) {
+        if (move.r < 0 || move.r >= BOARD_SIZE || move.c < 0 || move.c >= BOARD_SIZE || isMoveBlocked(pos, move, walls)) {
+            continue;
+        }
+
+        if (move.r === opponentPos.r && move.c === opponentPos.c) {
+            // Adjacent to opponent, calculate jumps
+            const dr = opponentPos.r - pos.r;
+            const dc = opponentPos.c - pos.c;
+            const jumpPos = { r: opponentPos.r + dr, c: opponentPos.c + dc };
+
+            // Straight jump
+            if (jumpPos.r >= 0 && jumpPos.r < BOARD_SIZE && jumpPos.c >= 0 && jumpPos.c < BOARD_SIZE && !isMoveBlocked(opponentPos, jumpPos, walls)) {
+                moves.push(jumpPos);
+            } else {
+                // Diagonal jumps if straight is blocked
+                if (dr === 0) { // Horizontal adjacency
+                    const d1 = { r: opponentPos.r - 1, c: opponentPos.c };
+                    const d2 = { r: opponentPos.r + 1, c: opponentPos.c };
+                    if (!isMoveBlocked(opponentPos, d1, walls)) moves.push(d1);
+                    if (!isMoveBlocked(opponentPos, d2, walls)) moves.push(d2);
+                } else { // Vertical adjacency
+                    const d1 = { r: opponentPos.r, c: opponentPos.c - 1 };
+                    const d2 = { r: opponentPos.r, c: opponentPos.c + 1 };
+                    if (!isMoveBlocked(opponentPos, d1, walls)) moves.push(d1);
+                    if (!isMoveBlocked(opponentPos, d2, walls)) moves.push(d2);
+                }
+            }
+        } else {
+            moves.push(move);
+        }
+    }
+    return moves.filter(m => m.r >= 0 && m.r < BOARD_SIZE && m.c >= 0 && m.c < BOARD_SIZE);
 };
 
 // Simplified helper to find a potentially good wall placement to block the opponent.
@@ -36,7 +65,7 @@ const findBestBlockingWall = (
     walls: Wall[], 
     isValidWall: (wall: Wall) => boolean
 ): Omit<Wall, 'playerId'> | null => {
-    const opponentPath = findShortestPath(opponent.position, opponent.goalRow, walls);
+    const opponentPath = findShortestPath(opponent.position, opponent.goalRow, walls, aiPlayer.position);
     if (!opponentPath || opponentPath.length < 2) return null;
 
     // Try to place a wall along the first step of the opponent's path
@@ -72,8 +101,9 @@ const getLocalAiMove = (
     difficulty: Difficulty,
     isValidWallPlacement: (wall: Wall) => boolean
 ): AiAction => {
-    const myPath = findShortestPath(aiPlayer.position, aiPlayer.goalRow, walls);
-    const humanPath = findShortestPath(humanPlayer.position, humanPlayer.goalRow, walls);
+    // The pathfinding now correctly considers jumps over the opponent.
+    const myPath = findShortestPath(aiPlayer.position, aiPlayer.goalRow, walls, humanPlayer.position);
+    const humanPath = findShortestPath(humanPlayer.position, humanPlayer.goalRow, walls, aiPlayer.position);
 
     const myPathLength = myPath ? myPath.length - 1 : Infinity;
     const humanPathLength = humanPath ? humanPath.length - 1 : Infinity;
@@ -81,9 +111,15 @@ const getLocalAiMove = (
     // --- Decision Logic ---
     let bestMoveAction: AiAction | null = null;
     if (myPath && myPath.length > 1) {
-        bestMoveAction = { action: 'MOVE', position: myPath[1], reasoning: "Moving along my shortest path." };
-    } else { // Trapped or no path, find any valid move
-        const anyMove = getPossibleMoves(aiPlayer.position, walls)[0];
+        const move = myPath[1];
+        const isJump = Math.abs(move.r - aiPlayer.position.r) + Math.abs(move.c - aiPlayer.position.c) > 1;
+        bestMoveAction = { 
+            action: 'MOVE', 
+            position: move, 
+            reasoning: isJump ? "Jumping over your pawn." : "Moving along my shortest path." 
+        };
+    } else { // Trapped or no path to goal, find any valid move
+        const anyMove = getPossibleMoves(aiPlayer.position, walls, humanPlayer.position)[0];
         if (anyMove) {
             bestMoveAction = { action: 'MOVE', position: anyMove, reasoning: "My path is blocked, trying to find a way around." };
         }
@@ -116,7 +152,7 @@ const getLocalAiMove = (
     // HARD: Compare the outcome of moving vs placing a wall
     if (difficulty === Difficulty.HARD && bestWallAction && bestMoveAction) {
         const newWalls = [...walls, { ...(bestWallAction.position), orientation: bestWallAction.orientation!, playerId: aiPlayer.id }];
-        const humanPathAfterWall = findShortestPath(humanPlayer.position, humanPlayer.goalRow, newWalls);
+        const humanPathAfterWall = findShortestPath(humanPlayer.position, humanPlayer.goalRow, newWalls, aiPlayer.position);
         const humanPathLengthAfterWall = humanPathAfterWall ? humanPathAfterWall.length - 1 : Infinity;
         
         // If placing a wall is significantly better (lengthens opponent path), do it.

@@ -17,7 +17,7 @@ const isMoveBlocked = (from: Position, to: Position, walls: Wall[]): boolean => 
 };
 
 // Breadth-First Search to find the shortest path from a starting position to a goal row
-export const findShortestPath = (startPos: Position, goalRow: number, walls: Wall[]): Position[] | null => {
+export const findShortestPath = (startPos: Position, goalRow: number, walls: Wall[], opponentPos?: Position): Position[] | null => {
     const queue: Position[][] = [[startPos]];
     const visited = new Set<string>([`${startPos.r},${startPos.c}`]);
 
@@ -30,15 +30,49 @@ export const findShortestPath = (startPos: Position, goalRow: number, walls: Wal
         }
 
         const { r, c } = currentPos;
-        const neighbors = [{ r: r - 1, c }, { r: r + 1, c }, { r, c: c - 1 }, { r, c: c + 1 }];
+        const neighbors: Position[] = [];
+
+        // Generate potential moves
+        const potentialMoves = [{ r: r - 1, c }, { r: r + 1, c }, { r, c: c - 1 }, { r, c: c + 1 }];
+        
+        for(const move of potentialMoves) {
+            if (isMoveBlocked(currentPos, move, walls)) continue;
+
+            if (opponentPos && move.r === opponentPos.r && move.c === opponentPos.c) {
+                // Adjacent to opponent, calculate jumps
+                const dr = opponentPos.r - currentPos.r;
+                const dc = opponentPos.c - currentPos.c;
+                const jumpPos = { r: opponentPos.r + dr, c: opponentPos.c + dc };
+
+                // Straight jump
+                if (jumpPos.r >= 0 && jumpPos.r < BOARD_SIZE && jumpPos.c >= 0 && jumpPos.c < BOARD_SIZE && !isMoveBlocked(opponentPos, jumpPos, walls)) {
+                    neighbors.push(jumpPos);
+                } else {
+                    // Diagonal jumps if straight is blocked
+                    if (dr === 0) { // Horizontal adjacency
+                        const d1 = { r: opponentPos.r - 1, c: opponentPos.c };
+                        const d2 = { r: opponentPos.r + 1, c: opponentPos.c };
+                        if (!isMoveBlocked(opponentPos, d1, walls)) neighbors.push(d1);
+                        if (!isMoveBlocked(opponentPos, d2, walls)) neighbors.push(d2);
+                    } else { // Vertical adjacency
+                        const d1 = { r: opponentPos.r, c: opponentPos.c - 1 };
+                        const d2 = { r: opponentPos.r, c: opponentPos.c + 1 };
+                        if (!isMoveBlocked(opponentPos, d1, walls)) neighbors.push(d1);
+                        if (!isMoveBlocked(opponentPos, d2, walls)) neighbors.push(d2);
+                    }
+                }
+            } else {
+                neighbors.push(move);
+            }
+        }
+
 
         for (const neighbor of neighbors) {
             const neighborKey = `${neighbor.r},${neighbor.c}`;
             if (
                 neighbor.r >= 0 && neighbor.r < BOARD_SIZE &&
                 neighbor.c >= 0 && neighbor.c < BOARD_SIZE &&
-                !visited.has(neighborKey) &&
-                !isMoveBlocked(currentPos, neighbor, walls)
+                !visited.has(neighborKey)
             ) {
                 visited.add(neighborKey);
                 const newPath = [...path, neighbor];

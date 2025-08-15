@@ -24,11 +24,12 @@ const useGameLogic = () => {
   const [apiError, setApiError] = useState<string | null>(null);
   const [gameTime, setGameTime] = useState(0);
   const [turnTime, setTurnTime] = useState(60);
+  const [configuredTurnTime, setConfiguredTurnTime] = useState(60);
   const [showRateLimitModal, setShowRateLimitModal] = useState(false);
   const [wallPlacementError, setWallPlacementError] = useState<string | null>(null);
 
 
-  const initializeGame = useCallback((mode: GameMode, p1Name: string = 'Player 1', selectedAiType: AiType) => {
+  const initializeGame = useCallback((mode: GameMode, p1Name: string = 'Player 1', selectedAiType: AiType, duration: number) => {
     let p2Name = 'Player 2';
     if (mode === GameMode.PVC) {
         p2Name = selectedAiType === AiType.GEMINI ? 'Gemini AI' : 'Local AI';
@@ -60,7 +61,8 @@ const useGameLogic = () => {
     setLastAiAction(null);
     setApiError(null);
     setGameTime(0);
-    setTurnTime(60);
+    setConfiguredTurnTime(duration);
+    setTurnTime(duration);
   }, []);
 
     const isValidMove = useCallback((from: Position, to: Position, p1Pos: Position, p2Pos: Position, currentWalls: Wall[]): boolean => {
@@ -136,8 +138,8 @@ const useGameLogic = () => {
     setValidMoves([]);
     setIsPlacingWall(false);
     setWallPlacementError(null);
-    setTurnTime(60);
-  }, []);
+    setTurnTime(configuredTurnTime);
+  }, [configuredTurnTime]);
   
   const handleMove = useCallback((to: Position, from?: Position) => {
     const fromPos = from || selectedPiece;
@@ -324,11 +326,11 @@ const useGameLogic = () => {
     setWallPlacementError(null);
   };
 
-  const startGame = (mode: GameMode, diff: Difficulty, p1Name: string, type: AiType) => {
+  const startGame = (mode: GameMode, diff: Difficulty, p1Name: string, type: AiType, duration: number) => {
     setGameMode(mode);
     setDifficulty(diff);
     setAiType(type);
-    initializeGame(mode, p1Name, type);
+    initializeGame(mode, p1Name, type, duration);
   }
 
   const returnToMenu = () => {
@@ -339,6 +341,7 @@ const useGameLogic = () => {
     gameState, gameMode, difficulty, aiType, players, walls, currentPlayerId, winner,
     selectedPiece, validMoves, isPlacingWall, aiThinking, lastAiAction, apiError,
     gameTime, turnTime, showRateLimitModal, wallPlacementError,
+    configuredTurnTime,
     setShowRateLimitModal,
     startGame, handlePieceClick, handleCellClick: handleMove, handleWallClick: handlePlaceWall,
     togglePlacingWall,

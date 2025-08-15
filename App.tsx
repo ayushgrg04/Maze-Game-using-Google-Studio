@@ -20,7 +20,7 @@ const App: React.FC = () => {
     const {
         gameState, gameMode, difficulty, aiType, players, walls, currentPlayerId, winner,
         selectedPiece, validMoves, isPlacingWall, aiThinking, lastAiAction, apiError, gameTime, turnTime,
-        showRateLimitModal, wallPlacementError, setShowRateLimitModal,
+        showRateLimitModal, wallPlacementError, setShowRateLimitModal, configuredTurnTime,
         startGame, handlePieceClick, handleCellClick, handleWallClick, togglePlacingWall, returnToMenu
     } = useGameLogic();
 
@@ -28,8 +28,17 @@ const App: React.FC = () => {
     const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>(Difficulty.MEDIUM);
     const [selectedAiType, setSelectedAiType] = useState<AiType>(AiType.LOCAL);
     const [playerName, setPlayerName] = useState('Player 1');
+    const [turnDuration, setTurnDuration] = useState(60);
     const [aiMessage, setAiMessage] = useState<string | null>(null);
     const [errorToast, setErrorToast] = useState<string | null>(null);
+
+    const minTime = selectedMode === GameMode.PVC && selectedAiType === AiType.GEMINI ? 60 : 30;
+
+    useEffect(() => {
+        if (turnDuration < minTime) {
+            setTurnDuration(minTime);
+        }
+    }, [selectedMode, selectedAiType, turnDuration, minTime]);
 
     useEffect(() => {
         if (lastAiAction?.reasoning) {
@@ -52,12 +61,14 @@ const App: React.FC = () => {
     if (gameState === GameState.MENU) {
         return (
             <div className="min-h-screen flex items-center justify-center p-4 bg-gray-100">
-                <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-lg border">
-                    <h1 className="text-4xl font-bold text-center mb-2 text-gray-800">Maze Race</h1>
-                    <p className="text-gray-500 text-center mb-8">A strategic game of wits and walls.</p>
+                <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-lg border space-y-6">
+                    <div>
+                        <h1 className="text-4xl font-bold text-center mb-2 text-gray-800">Maze Race</h1>
+                        <p className="text-gray-500 text-center">A strategic game of wits and walls.</p>
+                    </div>
                     
-                    <div className="mb-6">
-                         <label htmlFor="playerName" className="text-lg font-semibold mb-3 text-gray-600 block">Your Name</label>
+                    <div>
+                         <label htmlFor="playerName" className="text-lg font-semibold mb-2 text-gray-600 block">Your Name</label>
                          <input
                             type="text"
                             id="playerName"
@@ -68,7 +79,7 @@ const App: React.FC = () => {
                          />
                     </div>
                     
-                    <div className="mb-6">
+                    <div>
                         <h2 className="text-lg font-semibold mb-3 text-gray-600">Game Mode</h2>
                         <div className="flex gap-4">
                             <button onClick={() => setSelectedMode(GameMode.PVP)} className={`w-full p-4 rounded-lg font-bold transition-all ${selectedMode === GameMode.PVP ? 'bg-blue-500 text-white shadow-lg scale-105' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Player vs Player</button>
@@ -77,7 +88,7 @@ const App: React.FC = () => {
                     </div>
 
                     {selectedMode === GameMode.PVC && (
-                        <div className="space-y-6 mb-8">
+                        <div className="space-y-6">
                             <div>
                                 <h2 className="text-lg font-semibold mb-3 text-gray-600">AI Type</h2>
                                 <div className="flex gap-4">
@@ -95,8 +106,22 @@ const App: React.FC = () => {
                             </div>
                         </div>
                     )}
+
+                    <div>
+                         <label htmlFor="turnTime" className="text-lg font-semibold mb-2 text-gray-600 block">Time Per Move (seconds)</label>
+                         <input
+                            type="number"
+                            id="turnTime"
+                            value={turnDuration}
+                            min={minTime}
+                            step="15"
+                            onChange={(e) => setTurnDuration(Math.max(minTime, Number(e.target.value)))}
+                            className="w-full p-3 rounded-lg bg-gray-200 border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                         />
+                         <p className="text-xs text-gray-500 mt-1">Minimum: {minTime} seconds.</p>
+                    </div>
                     
-                    <button onClick={() => startGame(selectedMode, selectedDifficulty, playerName, selectedAiType)} className="w-full bg-green-500 text-white font-bold py-4 rounded-lg hover:bg-green-600 transition-all shadow-lg text-xl transform hover:scale-105">
+                    <button onClick={() => startGame(selectedMode, selectedDifficulty, playerName, selectedAiType, turnDuration)} className="w-full bg-green-500 text-white font-bold py-4 rounded-lg hover:bg-green-600 transition-all shadow-lg text-xl transform hover:scale-105">
                         Start Game
                     </button>
                 </div>
@@ -168,7 +193,7 @@ const App: React.FC = () => {
                         <h3 className={`text-3xl font-bold mb-2`} style={{color: winner.color}}>{winner.name} wins!</h3>
                         { turnTime <= 0 && <p className="text-gray-600 mb-4">The other player ran out of time.</p>}
                         <div className="flex flex-col gap-4">
-                            <button onClick={() => startGame(gameMode, difficulty, players[1].name, aiType)} className="w-full bg-green-500 text-white font-bold py-3 rounded-lg hover:bg-green-600 transition-all">Play Again</button>
+                            <button onClick={() => startGame(gameMode, difficulty, players[1].name, aiType, configuredTurnTime)} className="w-full bg-green-500 text-white font-bold py-3 rounded-lg hover:bg-green-600 transition-all">Play Again</button>
                             <button onClick={returnToMenu} className="w-full bg-gray-600 text-white font-bold py-3 rounded-lg hover:bg-gray-500 transition-all">Main Menu</button>
                         </div>
                     </div>

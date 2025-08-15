@@ -44,7 +44,11 @@ const getAiMove = async (
       
     Rules for your turn:
     1. You can either MOVE your pawn or PLACE a wall.
-    2. Move: One step orthogonally (up, down, left, right). You cannot move into a space occupied by the opponent or through a wall.
+    2. Move Rules:
+       - Standard Move: One step orthogonally (up, down, left, right) to an empty, unblocked space.
+       - Jumping: If your pawn is adjacent to the opponent's pawn (with no wall between), you can jump over them to the next space in a straight line.
+       - Diagonal Jump: If a straight jump is blocked by a wall or the edge of the board, you can move to either valid, empty space diagonally adjacent to the opponent.
+       - You cannot move into a space occupied by the opponent.
     3. Place Wall: Place a 2-unit long wall. A wall placement is INVALID if it completely blocks all paths to the goal for EITHER player. Walls cannot overlap or cross each other.
     
     Difficulty Level: ${difficulty}
