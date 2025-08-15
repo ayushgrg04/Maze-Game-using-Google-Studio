@@ -1,9 +1,11 @@
 
+
 import React, { useState, useEffect } from 'react';
 import useGameLogic from './hooks/useGameLogic';
 import GameBoard from './components/GameBoard';
 import PlayerInfo from './components/PlayerInfo';
 import Modal from './components/Modal';
+import HelpModal from './components/HelpModal';
 import { AiChatTooltip } from './components/AiChatTooltip';
 import { GameState, GameMode, Difficulty, Player, AiType, StartPosition } from './types';
 
@@ -32,6 +34,7 @@ const App: React.FC = () => {
     const [aiMessage, setAiMessage] = useState<string | null>(null);
     const [errorToast, setErrorToast] = useState<string | null>(null);
     const [selectedStartPosition, setSelectedStartPosition] = useState<StartPosition>(StartPosition.CENTER);
+    const [showHelp, setShowHelp] = useState(false);
 
     const minTime = selectedMode === GameMode.PVC && selectedAiType === AiType.GEMINI ? 60 : 30;
 
@@ -61,81 +64,90 @@ const App: React.FC = () => {
 
     if (gameState === GameState.MENU) {
         return (
-            <div className="min-h-screen flex items-center justify-center p-4 bg-gray-100">
-                <div className="w-full max-w-md bg-white p-6 md:p-8 rounded-2xl shadow-lg border space-y-6">
-                    <div>
-                        <h1 className="text-4xl font-bold text-center mb-2 text-gray-800">Maze Race</h1>
-                        <p className="text-gray-500 text-center">A strategic game of wits and walls.</p>
-                    </div>
-                    
-                    <div>
-                         <label htmlFor="playerName" className="text-lg font-semibold mb-2 text-gray-600 block">Your Name</label>
-                         <input
-                            type="text"
-                            id="playerName"
-                            value={playerName}
-                            onChange={(e) => setPlayerName(e.target.value)}
-                            className="w-full p-3 rounded-lg bg-gray-200 border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                            placeholder="Enter your name"
-                         />
-                    </div>
-                    
-                    <div>
-                        <h2 className="text-lg font-semibold mb-3 text-gray-600">Game Mode</h2>
-                        <div className="flex gap-4">
-                            <button onClick={() => setSelectedMode(GameMode.PVP)} className={`w-full p-4 rounded-lg font-bold transition-all ${selectedMode === GameMode.PVP ? 'bg-blue-500 text-white shadow-lg scale-105' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Player vs Player</button>
-                            <button onClick={() => setSelectedMode(GameMode.PVC)} className={`w-full p-4 rounded-lg font-bold transition-all ${selectedMode === GameMode.PVC ? 'bg-pink-500 text-white shadow-lg scale-105' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Player vs AI</button>
+            <>
+                {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
+                <div className="min-h-screen flex items-center justify-center p-4 bg-gray-100">
+                    <div className="w-full max-w-md bg-white p-6 md:p-8 rounded-2xl shadow-lg border space-y-6">
+                        <div>
+                            <h1 className="text-4xl font-bold text-center mb-2 text-gray-800">Maze Race</h1>
+                            <p className="text-gray-500 text-center">A strategic game of wits and walls.</p>
                         </div>
-                    </div>
-
-                    {selectedMode === GameMode.PVC && (
-                        <div className="space-y-6">
-                            <div>
-                                <h2 className="text-lg font-semibold mb-3 text-gray-600">AI Type</h2>
-                                <div className="flex gap-4">
-                                    <button onClick={() => setSelectedAiType(AiType.LOCAL)} className={`w-full p-3 rounded-lg font-bold transition-all ${selectedAiType === AiType.LOCAL ? 'bg-gray-800 text-white shadow-lg' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Local AI (Offline)</button>
-                                    <button onClick={() => setSelectedAiType(AiType.GEMINI)} className={`w-full p-3 rounded-lg font-bold transition-all ${selectedAiType === AiType.GEMINI ? 'bg-purple-500 text-white shadow-lg' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Gemini AI</button>
-                                </div>
-                            </div>
-                            <div>
-                                <h2 className="text-lg font-semibold mb-3 text-gray-600">AI Difficulty</h2>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {Object.values(Difficulty).map(d => (
-                                         <button key={d} onClick={() => setSelectedDifficulty(d)} className={`p-3 rounded-lg font-semibold transition-all text-sm ${selectedDifficulty === d ? 'bg-gray-600 text-white ring-2 ring-pink-500' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>{d}</button>
-                                    ))}
-                                </div>
+                        
+                        <div>
+                             <label htmlFor="playerName" className="text-lg font-semibold mb-2 text-gray-600 block">Your Name</label>
+                             <input
+                                type="text"
+                                id="playerName"
+                                value={playerName}
+                                onChange={(e) => setPlayerName(e.target.value)}
+                                className="w-full p-3 rounded-lg bg-gray-200 border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                                placeholder="Enter your name"
+                             />
+                        </div>
+                        
+                        <div>
+                            <h2 className="text-lg font-semibold mb-3 text-gray-600">Game Mode</h2>
+                            <div className="flex gap-4">
+                                <button onClick={() => setSelectedMode(GameMode.PVP)} className={`w-full p-4 rounded-lg font-bold transition-all ${selectedMode === GameMode.PVP ? 'bg-blue-500 text-white shadow-lg scale-105' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Player vs Player</button>
+                                <button onClick={() => setSelectedMode(GameMode.PVC)} className={`w-full p-4 rounded-lg font-bold transition-all ${selectedMode === GameMode.PVC ? 'bg-pink-500 text-white shadow-lg scale-105' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Player vs AI</button>
                             </div>
                         </div>
-                    )}
-                    
-                    <div>
-                        <h2 className="text-lg font-semibold mb-3 text-gray-600">Starting Position</h2>
-                        <div className="flex gap-4">
-                            <button onClick={() => setSelectedStartPosition(StartPosition.CENTER)} className={`w-full p-4 rounded-lg font-bold transition-all ${selectedStartPosition === StartPosition.CENTER ? 'bg-blue-500 text-white shadow-lg scale-105' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Center</button>
-                            <button onClick={() => setSelectedStartPosition(StartPosition.RANDOM)} className={`w-full p-4 rounded-lg font-bold transition-all ${selectedStartPosition === StartPosition.RANDOM ? 'bg-pink-500 text-white shadow-lg scale-105' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Random</button>
-                        </div>
-                    </div>
 
-                    <div>
-                         <label htmlFor="turnTime" className="text-lg font-semibold mb-2 text-gray-600 block">Time Per Move (seconds)</label>
-                         <input
-                            type="number"
-                            id="turnTime"
-                            value={turnDuration}
-                            min={minTime}
-                            step="15"
-                            onChange={(e) => setTurnDuration(Math.max(minTime, Number(e.target.value)))}
-                            className="w-full p-3 rounded-lg bg-gray-200 border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                         />
-                         <p className="text-xs text-gray-500 mt-1">Minimum: {minTime} seconds.</p>
+                        {selectedMode === GameMode.PVC && (
+                            <div className="space-y-6">
+                                <div>
+                                    <h2 className="text-lg font-semibold mb-3 text-gray-600">AI Type</h2>
+                                    <div className="flex gap-4">
+                                        <button onClick={() => setSelectedAiType(AiType.LOCAL)} className={`w-full p-3 rounded-lg font-bold transition-all ${selectedAiType === AiType.LOCAL ? 'bg-gray-800 text-white shadow-lg' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Local AI (Offline)</button>
+                                        <button onClick={() => setSelectedAiType(AiType.GEMINI)} className={`w-full p-3 rounded-lg font-bold transition-all ${selectedAiType === AiType.GEMINI ? 'bg-purple-500 text-white shadow-lg' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Gemini AI</button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-semibold mb-3 text-gray-600">AI Difficulty</h2>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {Object.values(Difficulty).map(d => (
+                                             <button key={d} onClick={() => setSelectedDifficulty(d)} className={`p-3 rounded-lg font-semibold transition-all text-sm ${selectedDifficulty === d ? 'bg-gray-600 text-white ring-2 ring-pink-500' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>{d}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        
+                        <div>
+                            <h2 className="text-lg font-semibold mb-3 text-gray-600">Starting Position</h2>
+                            <div className="flex gap-4">
+                                <button onClick={() => setSelectedStartPosition(StartPosition.CENTER)} className={`w-full p-4 rounded-lg font-bold transition-all ${selectedStartPosition === StartPosition.CENTER ? 'bg-blue-500 text-white shadow-lg scale-105' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Center</button>
+                                <button onClick={() => setSelectedStartPosition(StartPosition.RANDOM)} className={`w-full p-4 rounded-lg font-bold transition-all ${selectedStartPosition === StartPosition.RANDOM ? 'bg-pink-500 text-white shadow-lg scale-105' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>Random</button>
+                            </div>
+                        </div>
+
+                        <div>
+                             <label htmlFor="turnTime" className="text-lg font-semibold mb-2 text-gray-600 block">Time Per Move (seconds)</label>
+                             <input
+                                type="number"
+                                id="turnTime"
+                                value={turnDuration}
+                                min={minTime}
+                                step="15"
+                                onChange={(e) => setTurnDuration(Math.max(minTime, Number(e.target.value)))}
+                                className="w-full p-3 rounded-lg bg-gray-200 border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                             />
+                             <p className="text-xs text-gray-500 mt-1">Minimum: {minTime} seconds.</p>
+                        </div>
+                        
+                        <div className="flex flex-col gap-4">
+                             <button onClick={() => setShowHelp(true)} className="w-full bg-gray-500 text-white font-bold py-3 rounded-lg hover:bg-gray-600 transition-all shadow-md text-lg">
+                                How to Play
+                            </button>
+                            <button onClick={() => startGame(selectedMode, selectedDifficulty, playerName, selectedAiType, turnDuration, selectedStartPosition)} className="w-full bg-green-500 text-white font-bold py-4 rounded-lg hover:bg-green-600 transition-all shadow-lg text-xl transform hover:scale-105">
+                                Start Game
+                            </button>
+                        </div>
+
+                        <p className="text-xs text-gray-400 text-center pt-2">Version 1.0</p>
                     </div>
-                    
-                    <button onClick={() => startGame(selectedMode, selectedDifficulty, playerName, selectedAiType, turnDuration, selectedStartPosition)} className="w-full bg-green-500 text-white font-bold py-4 rounded-lg hover:bg-green-600 transition-all shadow-lg text-xl transform hover:scale-105">
-                        Start Game
-                    </button>
-                    <p className="text-xs text-gray-400 text-center pt-2">Version 1.0</p>
                 </div>
-            </div>
+            </>
         );
     }
     
