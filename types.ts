@@ -50,8 +50,8 @@ export enum StartPosition {
 }
 
 export type AiAction = {
-  action: 'MOVE' | 'PLACE_WALL';
-  position: Position;
+  action: 'MOVE' | 'PLACE_WALL' | 'PASS';
+  position?: Position;
   orientation?: 'horizontal' | 'vertical';
   reasoning: string;
 }

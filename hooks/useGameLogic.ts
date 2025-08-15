@@ -1,8 +1,7 @@
 
 
-
 import { useState, useCallback, useEffect } from 'react';
-import { BOARD_SIZE, INITIAL_WALLS } from '../constants';
+import { BOARD_SIZE } from '../constants';
 import getAiMove from '../services/geminiService';
 import getLocalAiMove from '../services/localAiService';
 import { onlineService } from '../services/onlineService';
@@ -14,6 +13,8 @@ type GameAction =
     | { type: 'MOVE', to: { r: number, c: number } }
     | { type: 'PLACE_WALL', wall: Omit<Wall, 'playerId'> }
     | { type: 'TIMEOUT' };
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const useGameLogic = () => {
   const [gameState, setGameState] = useState<GameState>(GameState.MENU);
@@ -40,6 +41,7 @@ const useGameLogic = () => {
   const [onlineGameId, setOnlineGameId] = useState<string | null>(null);
   const [onlinePlayerId, setOnlinePlayerId] = useState<1 | 2 | null>(null);
   const [onlineRequestTimeout, setOnlineRequestTimeout] = useState<number | null>(null);
+  const [initialWalls, setInitialWalls] = useState(10);
 
 
   const resetGameState = useCallback(() => {
@@ -67,18 +69,19 @@ const useGameLogic = () => {
     resetGameState();
   }, [resetGameState]);
 
-  const initializeLocalGame = useCallback((mode: GameMode, p1Name: string = 'Player 1', selectedAiType: AiType, duration: number, startPos: StartPosition) => {
+  const initializeLocalGame = useCallback((mode: GameMode, p1Name: string = 'Player 1', selectedAiType: AiType, duration: number, startPos: StartPosition, wallsCount: number) => {
     resetGameState();
     let p2Name = 'Player 2';
     if (mode === GameMode.PVC) {
         p2Name = selectedAiType === AiType.GEMINI ? 'Gemini AI' : 'Local AI';
     }
+    setInitialWalls(wallsCount);
 
     const p1Col = startPos === StartPosition.CENTER ? Math.floor(BOARD_SIZE / 2) : Math.floor(Math.random() * BOARD_SIZE);
     const p2Col = startPos === StartPosition.CENTER ? Math.floor(BOARD_SIZE / 2) : (BOARD_SIZE - 1) - p1Col;
     
-    const p1: Player = { id: 1, name: p1Name, color: '#3b82f6', position: { r: BOARD_SIZE - 1, c: p1Col }, wallsLeft: INITIAL_WALLS, goalRow: 0 };
-    const p2: Player = { id: 2, name: p2Name, color: '#ec4899', position: { r: 0, c: p2Col }, wallsLeft: INITIAL_WALLS, goalRow: BOARD_SIZE - 1 };
+    const p1: Player = { id: 1, name: p1Name, color: '#3b82f6', position: { r: BOARD_SIZE - 1, c: p1Col }, wallsLeft: wallsCount, goalRow: 0 };
+    const p2: Player = { id: 2, name: p2Name, color: '#ec4899', position: { r: 0, c: p2Col }, wallsLeft: wallsCount, goalRow: BOARD_SIZE - 1 };
 
     setPlayers({ 1: p1, 2: p2 });
     setConfiguredTurnTime(duration);
@@ -105,8 +108,8 @@ const useGameLogic = () => {
     }
 
     const newWalls = [...currentWalls, wall];
-    const p1PathExists = findShortestPath(p1.position, p1.goalRow, newWalls) !== null;
-    const p2PathExists = findShortestPath(p2.position, p2.goalRow, newWalls) !== null;
+    const p1PathExists = findShortestPath(p1.position, p1.goalRow, newWalls, p2.position) !== null;
+    const p2PathExists = findShortestPath(p2.position, p2.goalRow, newWalls, p1.position) !== null;
     
     return p1PathExists && p2PathExists;
   }, []);
@@ -224,6 +227,10 @@ const useGameLogic = () => {
       setTurnTime(data.turnTime);
       
       const gameHasStarted = data.players && data.players[1] && data.players[2];
+      
+      if(gameHasStarted && players[1]){
+          setInitialWalls(players[1].wallsLeft);
+      }
 
       if (gameHasStarted) {
           if (onlineRequestTimeout) {
@@ -237,7 +244,7 @@ const useGameLogic = () => {
       } else if (gameHasStarted && gameState !== GameState.PLAYING) {
           setGameState(GameState.PLAYING);
       }
-  }, [gameState, onlineRequestTimeout]);
+  }, [gameState, onlineRequestTimeout, players]);
 
   useEffect(() => {
       if (onlineGameId) {
@@ -246,11 +253,12 @@ const useGameLogic = () => {
       }
   }, [onlineGameId, updateStateFromOnline]);
 
-  const handleCreateOnlineGame = useCallback(async (p1Name: string, duration: number, startPos: StartPosition) => {
+  const handleCreateOnlineGame = useCallback(async (p1Name: string, duration: number, startPos: StartPosition, wallsCount: number) => {
     resetGameState();
     setGameMode(GameMode.PVO);
+    setInitialWalls(wallsCount);
     const p1Col = startPos === StartPosition.CENTER ? Math.floor(BOARD_SIZE / 2) : Math.floor(Math.random() * BOARD_SIZE);
-    const p1: Player = { id: 1, name: p1Name, color: '#3b82f6', position: { r: BOARD_SIZE - 1, c: p1Col }, wallsLeft: INITIAL_WALLS, goalRow: 0 };
+    const p1: Player = { id: 1, name: p1Name, color: '#3b82f6', position: { r: BOARD_SIZE - 1, c: p1Col }, wallsLeft: wallsCount, goalRow: 0 };
     setPlayers({ 1: p1 });
     setConfiguredTurnTime(duration);
     setGameState(GameState.ONLINE_WAITING);
@@ -272,6 +280,7 @@ const useGameLogic = () => {
         setOnlineGameId(gameId);
         setOnlinePlayerId(2);
         setConfiguredTurnTime(initialState.turnTime);
+        setInitialWalls(initialState.players[1].wallsLeft);
         setGameMode(GameMode.PVO);
         updateStateFromOnline(initialState);
       } else {
@@ -279,10 +288,10 @@ const useGameLogic = () => {
       }
   }, [updateStateFromOnline]);
   
-  const handleFindMatch = useCallback(async (pName: string, duration: number, startPos: StartPosition) => {
+  const handleFindMatch = useCallback(async (pName: string, duration: number, startPos: StartPosition, wallsCount: number) => {
     resetGameState();
     setGameMode(GameMode.PVO);
-    const p: Omit<Player, 'id' | 'color' | 'position' | 'goalRow'> = { name: pName, wallsLeft: INITIAL_WALLS };
+    const p: Omit<Player, 'id' | 'color' | 'position' | 'goalRow'> = { name: pName, wallsLeft: wallsCount };
 
     setGameState(GameState.ONLINE_WAITING);
     setConfiguredTurnTime(duration);
@@ -335,6 +344,13 @@ const useGameLogic = () => {
     setLastAiAction(null);
     setApiError(null);
 
+    // Add a random "thinking" delay ONLY for the local AI to feel more human.
+    // Gemini AI has natural network latency, so no artificial delay is needed.
+    if (aiType === AiType.LOCAL) {
+      const randomDelay = Math.random() * 4000 + 1000; // 1 to 5 seconds
+      await delay(randomDelay);
+    }
+
     try {
         let aiAction: AiAction;
         if (aiType === AiType.LOCAL) {
@@ -346,25 +362,63 @@ const useGameLogic = () => {
         
         setLastAiAction(aiAction);
         
-        if (aiAction.action === 'MOVE') {
+        if (aiAction.action === 'PASS') {
+            switchTurn();
+        } else if (aiAction.action === 'MOVE') {
+            if (!aiAction.position) throw new Error("AI action 'MOVE' is missing position.");
             const possibleMoves = getPossibleMoves(players[2].position, walls, players[1].position);
             const moveIsValid = possibleMoves.some(m => m.r === aiAction.position.r && m.c === aiAction.position.c);
             if (moveIsValid) handleMove(aiAction.position, players[2].position);
             else throw new Error("AI suggested an invalid move.");
-        } else if (aiAction.action === 'PLACE_WALL' && aiAction.orientation) {
+        } else if (aiAction.action === 'PLACE_WALL') {
+            if (!aiAction.position || !aiAction.orientation) throw new Error("AI action 'PLACE_WALL' is missing properties.");
             const wallToPlace = { r: aiAction.position.r, c: aiAction.position.c, orientation: aiAction.orientation };
             if (isValidWallPlacement({ ...wallToPlace, playerId: 2 }, walls, players[1], players[2])) handlePlaceWall(wallToPlace);
             else throw new Error("AI suggested an invalid wall placement.");
         } else {
-            throw new Error(`AI returned an invalid action.`);
+            throw new Error(`AI returned an invalid action type.`);
         }
     } catch (error: any) {
-        if (error.message && error.message.includes('RESOURCE_EXHAUSTED')) setShowRateLimitModal(true);
-        else setApiError(error.message || "An unexpected AI error occurred. Making a default move.");
+        if (error.message && error.message.includes('RESOURCE_EXHAUSTED')) {
+            setShowRateLimitModal(true);
+        } else {
+            setApiError(error.message || "An unexpected AI error occurred. Making a default move.");
+        }
         
-        const fallbackPath = findShortestPath(players[2].position, players[2].goalRow, walls, players[1].position);
-        if (fallbackPath && fallbackPath.length > 1) handleMove(fallbackPath[1], players[2].position);
-        else switchTurn();
+        // --- Robust Fallback Logic ---
+        // This block ensures the AI's turn always ends, preventing a timeout loop.
+        const aiPlayer = players[2];
+        const humanPlayer = players[1];
+
+        const possibleMoves = getPossibleMoves(aiPlayer.position, walls, humanPlayer.position);
+
+        if (possibleMoves.length > 0) {
+            const fallbackPath = findShortestPath(aiPlayer.position, aiPlayer.goalRow, walls, humanPlayer.position);
+            let moveToMake = possibleMoves[0]; // Default to the first available move
+
+            if (fallbackPath && fallbackPath.length > 1) {
+                const bestStep = fallbackPath[1];
+                const isBestStepValid = possibleMoves.some(m => m.r === bestStep.r && m.c === bestStep.c);
+                if (isBestStepValid) {
+                    moveToMake = bestStep;
+                }
+            }
+            
+            // Perform the move directly instead of calling handleMove, to bypass any validation issues.
+            const updatedPlayers = { ...players };
+            updatedPlayers[2].position = moveToMake;
+            setPlayers(updatedPlayers);
+            
+            if (moveToMake.r === aiPlayer.goalRow) {
+                setWinner(aiPlayer);
+                setGameState(GameState.GAME_OVER);
+            } else {
+                switchTurn();
+            }
+        } else {
+            // No moves possible, AI must pass.
+            switchTurn();
+        }
     } finally {
         setAiThinking(false);
     }
@@ -372,8 +426,7 @@ const useGameLogic = () => {
 
   useEffect(() => {
     if(gameState === GameState.PLAYING && gameMode === GameMode.PVC && currentPlayerId === 2 && !winner && !aiThinking) {
-      const timer = setTimeout(() => executeAiMove(), 1000);
-      return () => clearTimeout(timer);
+      executeAiMove();
     }
   }, [currentPlayerId, gameState, gameMode, winner, executeAiMove, aiThinking]);
 
@@ -434,12 +487,12 @@ const useGameLogic = () => {
     setWallPlacementError(null);
   };
 
-  const startGame = (mode: GameMode, diff: Difficulty, p1Name: string, type: AiType, duration: number, startPos: StartPosition) => {
+  const startGame = (mode: GameMode, diff: Difficulty, p1Name: string, type: AiType, duration: number, startPos: StartPosition, wallsCount: number) => {
     setGameMode(mode);
     setDifficulty(diff);
     setAiType(type);
     setStartPosition(startPos);
-    initializeLocalGame(mode, p1Name, type, duration, startPos);
+    initializeLocalGame(mode, p1Name, type, duration, startPos, wallsCount);
   }
 
   return {
@@ -447,8 +500,10 @@ const useGameLogic = () => {
     selectedPiece, validMoves, isPlacingWall, aiThinking, lastAiAction, apiError,
     gameTime, turnTime, showRateLimitModal, wallPlacementError,
     configuredTurnTime, startPosition, wallPreview, onlineGameId, onlinePlayerId, onlineRequestTimeout,
+    initialWalls,
     setShowRateLimitModal,
-    startGame, handleCellClick: handleMove, handleWallPreview,
+    startGame, handleCellClick: handleMove,
+    handleWallPreview,
     confirmWallPlacement, cancelWallPlacement,
     togglePlacingWall, returnToMenu,
     handleCreateOnlineGame, handleJoinOnlineGame, handleFindMatch, handleCancelFindMatch, handleCancelCreateGame,

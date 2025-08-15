@@ -80,87 +80,75 @@ const getLocalAiMove = (
     difficulty: Difficulty,
     isValidWallPlacement: (wall: Wall) => boolean
 ): AiAction => {
-    // --- Universal Setup ---
+    // --- Step 1: Find the best possible move ---
     const myPath = findShortestPath(aiPlayer.position, aiPlayer.goalRow, walls, humanPlayer.position);
-    const humanPath = findShortestPath(humanPlayer.position, humanPlayer.goalRow, walls, aiPlayer.position);
+    let bestMove = myPath && myPath.length > 1 ? myPath[1] : null;
 
-    const myPathLength = myPath ? myPath.length - 1 : Infinity;
-    const humanPathLength = humanPath ? humanPath.length - 1 : Infinity;
-
-    // --- Best Move Calculation ---
-    let bestMoveAction: AiAction | null = null;
-    if (myPath && myPath.length > 1) {
-        const move = myPath[1];
-        const isJump = Math.abs(move.r - aiPlayer.position.r) + Math.abs(move.c - aiPlayer.position.c) > 1;
-        bestMoveAction = { 
-            action: 'MOVE', 
-            position: move, 
-            reasoning: isJump ? "Jumping over your pawn for a shortcut." : "Advancing along my shortest path." 
-        };
-    } else { // Trapped or no path to goal, try to find any valid move.
+    // If no path exists, find any possible move to escape.
+    if (!bestMove) {
         const anyMove = getPossibleMoves(aiPlayer.position, walls, humanPlayer.position)[0];
-        if (anyMove) {
-            bestMoveAction = { action: 'MOVE', position: anyMove, reasoning: "My main path is blocked, so I'm finding a new route." };
-        }
+        if (anyMove) bestMove = anyMove;
     }
 
-    const defaultMove = bestMoveAction ?? { action: 'MOVE', position: aiPlayer.position, reasoning: "I am trapped and have no valid moves." };
+    // If no move is possible at all, the AI is trapped and must pass its turn.
+    if (!bestMove) {
+        return { action: 'PASS', reasoning: "I'm trapped and cannot move." };
+    }
 
-    // --- Difficulty-based Decision Logic ---
+    const moveAction: AiAction = {
+        action: 'MOVE',
+        position: bestMove,
+        reasoning: "Advancing along my shortest path.",
+    };
+
+    // --- Step 2: For EASY difficulty, always choose the best move ---
     if (difficulty === Difficulty.EASY) {
-        return defaultMove;
+        return moveAction;
     }
 
-    // --- MEDIUM & HARD: Wall Placement Consideration ---
+    // --- Step 3: For MEDIUM & HARD, consider placing a wall ---
     if (aiPlayer.wallsLeft === 0) {
-        return defaultMove;
+        return moveAction; // No walls left, must move.
     }
     
-    if (difficulty === Difficulty.HARD) {
-        const bestWallDetails = findBestBlockingWall(aiPlayer, humanPlayer, walls, isValidWallPlacement);
+    const humanPathLength = findShortestPath(humanPlayer.position, humanPlayer.goalRow, walls, aiPlayer.position)?.length || Infinity;
+    const myPathLength = myPath?.length || Infinity;
+    
+    const bestWallDetails = findBestBlockingWall(aiPlayer, humanPlayer, walls, isValidWallPlacement);
+
+    if (bestWallDetails) {
+        const wallAction: AiAction = {
+            action: 'PLACE_WALL',
+            position: bestWallDetails.wall,
+            orientation: bestWallDetails.wall.orientation,
+            reasoning: "Placing a wall to obstruct your path."
+        };
         
-        if (bestWallDetails) {
-            const isWinning = myPathLength <= humanPathLength;
+        const isWinning = myPathLength <= humanPathLength;
+
+        if (difficulty === Difficulty.HARD) {
             // If losing, place any effective wall.
             if (!isWinning && bestWallDetails.score > 0) {
-                return {
-                    action: 'PLACE_WALL',
-                    position: { r: bestWallDetails.wall.r, c: bestWallDetails.wall.c },
-                    orientation: bestWallDetails.wall.orientation,
-                    reasoning: "You're ahead, so I'm placing a wall to slow you down."
-                };
+                 wallAction.reasoning = "You're ahead, so I'm slowing you down.";
+                 return wallAction;
             }
             // If winning, only place a wall if it's a very strong, decisive move.
             if (isWinning && bestWallDetails.score >= 3) {
-                 return {
-                    action: 'PLACE_WALL',
-                    position: { r: bestWallDetails.wall.r, c: bestWallDetails.wall.c },
-                    orientation: bestWallDetails.wall.orientation,
-                    reasoning: "Placing a key wall to secure my lead."
-                };
+                 wallAction.reasoning = "Placing a key wall to secure my lead.";
+                 return wallAction;
             }
         }
-        // If no good wall placement is found, or it's not strategically sound to place one, move.
-        return defaultMove;
-    }
 
-    if (difficulty === Difficulty.MEDIUM) {
-        // Medium AI only places a wall if it's losing and finds an obvious block.
-        if (myPathLength > humanPathLength) {
-             const blockingWall = findBestBlockingWall(aiPlayer, humanPlayer, walls, isValidWallPlacement);
-             if (blockingWall && blockingWall.score > 0) {
-                return {
-                    action: 'PLACE_WALL',
-                    position: { r: blockingWall.wall.r, c: blockingWall.wall.c },
-                    orientation: blockingWall.wall.orientation,
-                    reasoning: "Placing a wall to obstruct your path."
-                };
-             }
+        if (difficulty === Difficulty.MEDIUM) {
+            // Medium AI only places a wall if it's losing and finds an obvious block.
+            if (!isWinning && bestWallDetails.score > 0) {
+                return wallAction;
+            }
         }
     }
 
-    // Default for Medium (if not placing wall) and fallback for Hard
-    return defaultMove;
+    // --- Step 4: If no wall was placed, perform the best move ---
+    return moveAction;
 };
 
 export default getLocalAiMove;

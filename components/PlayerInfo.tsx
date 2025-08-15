@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import type { Player } from '../types';
 
@@ -12,7 +13,7 @@ const PlayerInfo: React.FC<PlayerInfoProps> = ({ player }) => {
       <div className={`w-6 h-6 rounded-full flex-shrink-0`} style={{ backgroundColor: player.color }}></div>
       <div>
         <p className="font-semibold text-gray-700 text-sm md:text-base whitespace-nowrap">{player.name}</p>
-        <p className="text-xs md:text-sm text-gray-500">{player.wallsLeft} walls</p>
+        <p className="text-sm md:text-base text-gray-500">{player.wallsLeft} walls</p>
       </div>
     </div>
   );

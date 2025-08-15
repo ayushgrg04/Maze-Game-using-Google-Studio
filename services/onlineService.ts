@@ -1,7 +1,8 @@
 
+
 import mqtt from 'mqtt';
 import type { MqttClient } from 'mqtt';
-import { BOARD_SIZE, INITIAL_WALLS } from '../constants';
+import { BOARD_SIZE } from '../constants';
 import type { Player, OnlineGameData } from '../types';
 import { StartPosition } from '../types';
 
@@ -132,7 +133,8 @@ class OnlineGameService {
 
         const p1Col = gameState.players[1].position.c;
         const p2Col = (BOARD_SIZE - 1) - p1Col;
-        const player2: Player = { id: 2, name: player2Name, color: '#ec4899', position: { r: 0, c: p2Col }, wallsLeft: INITIAL_WALLS, goalRow: BOARD_SIZE - 1, };
+        const initialWalls = gameState.players[1].wallsLeft;
+        const player2: Player = { id: 2, name: player2Name, color: '#ec4899', position: { r: 0, c: p2Col }, wallsLeft: initialWalls, goalRow: BOARD_SIZE - 1, };
         gameState.players[2] = player2;
         
         await this.publishGameState(gameId, gameState);
@@ -218,6 +220,8 @@ class OnlineGameService {
         
         const p1: Player = { ...request.playerData, id: 1, color: '#3b82f6', position: { r: BOARD_SIZE - 1, c: p1Col }, goalRow: 0 };
         const p2Data = JSON.parse(sessionStorage.getItem('matchmaking_player') || '{}');
+        // Ensure Player 2 uses the same wall count as Player 1 for fairness
+        p2Data.wallsLeft = request.playerData.wallsLeft;
         const p2: Player = { ...p2Data, id: 2, color: '#ec4899', position: { r: 0, c: p2Col }, goalRow: BOARD_SIZE - 1 };
         
         const gameId = Math.random().toString(36).substr(2, 6);
