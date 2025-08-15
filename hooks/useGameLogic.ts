@@ -69,11 +69,13 @@ const useGameLogic = () => {
     resetGameState();
   }, [resetGameState]);
 
-  const initializeLocalGame = useCallback((mode: GameMode, p1Name: string = 'Player 1', selectedAiType: AiType, duration: number, startPos: StartPosition, wallsCount: number) => {
+  const initializeLocalGame = useCallback((mode: GameMode, p1Name: string = 'Player 1', selectedAiType: AiType, selectedDifficulty: Difficulty, duration: number, startPos: StartPosition, wallsCount: number) => {
     resetGameState();
     let p2Name = 'Player 2';
     if (mode === GameMode.PVC) {
-        p2Name = selectedAiType === AiType.GEMINI ? 'Gemini AI' : 'Local AI';
+        const aiName = selectedAiType === AiType.GEMINI ? 'Gemini AI' : 'Local AI';
+        const difficultyString = selectedDifficulty.charAt(0) + selectedDifficulty.slice(1).toLowerCase();
+        p2Name = `${aiName} (${difficultyString})`;
     }
     setInitialWalls(wallsCount);
 
@@ -492,7 +494,7 @@ const useGameLogic = () => {
     setDifficulty(diff);
     setAiType(type);
     setStartPosition(startPos);
-    initializeLocalGame(mode, p1Name, type, duration, startPos, wallsCount);
+    initializeLocalGame(mode, p1Name, type, diff, duration, startPos, wallsCount);
   }
 
   return {

@@ -203,6 +203,11 @@ const App: React.FC = () => {
                 <Modal title="Game Over!">
                     <div className="text-center">
                         <h3 className={`text-3xl font-bold mb-2`} style={{color: winner.color}}>{winner.name} wins!</h3>
+                        {gameMode === GameMode.PVC && winner.id === 1 && (
+                            <p className="text-gray-600 mb-4 text-lg">
+                                You defeated <span className="font-bold">{players[2].name}</span>!
+                            </p>
+                        )}
                         { turnTime <= 0 && <p className="text-gray-600 mb-4">The other player ran out of time.</p>}
                         <div className="flex flex-col gap-4">
                            { gameMode !== GameMode.PVO && <button onClick={() => startGame(gameMode, difficulty, players[1].name, aiType, configuredTurnTime, startPosition, initialWalls)} className="w-full bg-green-500 text-white font-bold py-3 rounded-lg hover:bg-green-600 transition-all">Play Again</button>}

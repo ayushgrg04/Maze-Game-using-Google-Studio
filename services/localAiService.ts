@@ -3,6 +3,50 @@ import { findShortestPath, getPossibleMoves } from '../utils/pathfinding';
 import { Difficulty } from '../types';
 import type { Player, Wall, AiAction } from '../types';
 
+const messageTemplates = {
+    winning: [
+        "Victory is near! ✨",
+        "Just a few more steps... ♟️",
+        "I've got this in the bag. 😉",
+        "Your efforts are futile. 😏",
+    ],
+    losing: [
+        "You're surprisingly good at this. 🤔",
+        "Hmm, I need to rethink my strategy. 🧐",
+        "Don't get cocky. The game isn't over yet. 😠",
+        "An interesting move. Let's see how it plays out. 👀",
+    ],
+    blocking: [
+        "Blocked! Where will you go now? 🚧",
+        "Nice try, but this path is closed. ⛔",
+        "A wall for your troubles. Enjoy the detour! 😈",
+        "Sorry, not this way. 🧱",
+    ],
+    jumping: [
+        "Boing! Hopped right over you. 🐰",
+        "Excuse me, coming through! 👋",
+        "A little jump to speed things up. 🚀",
+        "Leapfrog! 😄",
+    ],
+    defaultMove: [
+        "Moving forward. Step by step. 🚶",
+        "Let's try this move. 👍",
+        "On the advance. ➡️",
+        "Just a simple move for now. 🙂",
+    ],
+    trapped: [
+        "Oh dear, I seem to be stuck. 😳",
+        "Well, this is awkward... 😅",
+        "You've cornered me! For now... 😠",
+    ]
+};
+
+const getRandomMessage = (category: keyof typeof messageTemplates): string => {
+    const messages = messageTemplates[category];
+    return messages[Math.floor(Math.random() * messages.length)];
+};
+
+
 /**
  * Finds the most strategically advantageous wall placement for the AI.
  * It evaluates potential walls along the opponent's shortest path, scoring them
@@ -92,13 +136,16 @@ const getLocalAiMove = (
 
     // If no move is possible at all, the AI is trapped and must pass its turn.
     if (!bestMove) {
-        return { action: 'PASS', reasoning: "I'm trapped and cannot move." };
+        return { action: 'PASS', reasoning: getRandomMessage('trapped') };
     }
+
+    // Check if the best move is a jump
+    const isJump = Math.abs(aiPlayer.position.r - bestMove.r) > 1 || Math.abs(aiPlayer.position.c - bestMove.c) > 1;
 
     const moveAction: AiAction = {
         action: 'MOVE',
         position: bestMove,
-        reasoning: "Advancing along my shortest path.",
+        reasoning: isJump ? getRandomMessage('jumping') : getRandomMessage('defaultMove'),
     };
 
     // --- Step 2: For EASY difficulty, always choose the best move ---
@@ -121,7 +168,7 @@ const getLocalAiMove = (
             action: 'PLACE_WALL',
             position: bestWallDetails.wall,
             orientation: bestWallDetails.wall.orientation,
-            reasoning: "Placing a wall to obstruct your path."
+            reasoning: getRandomMessage('blocking')
         };
         
         const isWinning = myPathLength <= humanPathLength;
@@ -129,12 +176,10 @@ const getLocalAiMove = (
         if (difficulty === Difficulty.HARD) {
             // If losing, place any effective wall.
             if (!isWinning && bestWallDetails.score > 0) {
-                 wallAction.reasoning = "You're ahead, so I'm slowing you down.";
                  return wallAction;
             }
             // If winning, only place a wall if it's a very strong, decisive move.
             if (isWinning && bestWallDetails.score >= 3) {
-                 wallAction.reasoning = "Placing a key wall to secure my lead.";
                  return wallAction;
             }
         }
@@ -147,7 +192,13 @@ const getLocalAiMove = (
         }
     }
 
-    // --- Step 4: If no wall was placed, perform the best move ---
+    // --- Step 4: If no wall was placed, determine the move's reasoning based on game state ---
+    if (myPathLength <= 3) { // Close to winning
+        moveAction.reasoning = getRandomMessage('winning');
+    } else if (myPathLength > humanPathLength + 2) { // Losing significantly
+        moveAction.reasoning = getRandomMessage('losing');
+    }
+
     return moveAction;
 };
 
