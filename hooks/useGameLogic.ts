@@ -1,4 +1,5 @@
 
+
 import { useState, useCallback, useEffect } from 'react';
 import { BOARD_SIZE, INITIAL_WALLS } from '../constants';
 import getAiMove from '../services/geminiService';
@@ -28,6 +29,7 @@ const useGameLogic = () => {
   const [configuredTurnTime, setConfiguredTurnTime] = useState(60);
   const [showRateLimitModal, setShowRateLimitModal] = useState(false);
   const [wallPlacementError, setWallPlacementError] = useState<string | null>(null);
+  const [wallPreview, setWallPreview] = useState<Omit<Wall, 'playerId'> | null>(null);
 
 
   const initializeGame = useCallback((mode: GameMode, p1Name: string = 'Player 1', selectedAiType: AiType, duration: number, startPos: StartPosition) => {
@@ -104,6 +106,7 @@ const useGameLogic = () => {
     setValidMoves([]);
     setIsPlacingWall(false);
     setWallPlacementError(null);
+    setWallPreview(null);
     setTurnTime(configuredTurnTime);
   }, [configuredTurnTime]);
 
@@ -169,23 +172,27 @@ const useGameLogic = () => {
     switchTurn();
   }, [players, walls, currentPlayerId, isValidWallPlacement, switchTurn]);
 
-  const handlePieceClick = useCallback((pos: Position) => {
-    // Prevent any piece interaction during the AI's turn
-    if (gameMode === GameMode.PVC && currentPlayerId === 2) return;
-      
-    if (isPlacingWall || !players[currentPlayerId]) return;
-    
-    // Only allow clicking on the current player's piece
-    if (players[currentPlayerId].position.r === pos.r && players[currentPlayerId].position.c === pos.c) {
-        if (selectedPiece) {
-            setSelectedPiece(null);
-            setValidMoves([]);
-        } else {
-            setSelectedPiece(pos);
-            calculateValidMoves(pos);
+  useEffect(() => {
+    // Automatically show valid moves for the human player at the start of their turn.
+    if (gameState === GameState.PLAYING && !isPlacingWall && !winner) {
+      const isHumanTurn = (gameMode === GameMode.PVP) || (gameMode === GameMode.PVC && currentPlayerId === 1);
+      if (isHumanTurn) {
+        const currentPlayer = players[currentPlayerId];
+        if (currentPlayer) {
+          setSelectedPiece(currentPlayer.position);
+          calculateValidMoves(currentPlayer.position);
         }
+      } else {
+        // Clear highlights on AI's turn
+        setSelectedPiece(null);
+        setValidMoves([]);
+      }
+    } else if (isPlacingWall || winner) {
+      // Clear moves when entering wall placement or game is over
+      setSelectedPiece(null);
+      setValidMoves([]);
     }
-  }, [isPlacingWall, players, selectedPiece, currentPlayerId, calculateValidMoves, gameMode]);
+  }, [currentPlayerId, gameState, gameMode, players, isPlacingWall, winner, calculateValidMoves]);
 
   const executeAiMove = useCallback(async () => {
     if (gameState !== GameState.PLAYING || gameMode !== GameMode.PVC || currentPlayerId !== 2 || winner || !players[1] || !players[2]) return;
@@ -294,8 +301,26 @@ const useGameLogic = () => {
       setGameState(GameState.GAME_OVER);
     }
   }, [turnTime, gameState, players, currentPlayerId]);
+
+  const handleWallPreview = useCallback((wall: Omit<Wall, 'playerId'>) => {
+    setWallPreview(wall);
+  }, []);
+
+  const confirmWallPlacement = useCallback(() => {
+    if (wallPreview) {
+      handlePlaceWall(wallPreview);
+    }
+    setWallPreview(null);
+  }, [wallPreview, handlePlaceWall]);
+
+  const cancelWallPlacement = useCallback(() => {
+    setWallPreview(null);
+  }, []);
   
   const togglePlacingWall = () => {
+    if (isPlacingWall) {
+        setWallPreview(null);
+    }
     setIsPlacingWall(prev => !prev);
     setSelectedPiece(null);
     setValidMoves([]);
@@ -318,11 +343,11 @@ const useGameLogic = () => {
     gameState, gameMode, difficulty, aiType, players, walls, currentPlayerId, winner,
     selectedPiece, validMoves, isPlacingWall, aiThinking, lastAiAction, apiError,
     gameTime, turnTime, showRateLimitModal, wallPlacementError,
-    configuredTurnTime, startPosition,
+    configuredTurnTime, startPosition, wallPreview,
     setShowRateLimitModal,
-    startGame, handlePieceClick, handleCellClick: handleMove, handleWallClick: handlePlaceWall,
-    togglePlacingWall,
-    returnToMenu,
+    startGame, handleCellClick: handleMove, handleWallPreview,
+    confirmWallPlacement, cancelWallPlacement,
+    togglePlacingWall, returnToMenu,
   };
 };
 

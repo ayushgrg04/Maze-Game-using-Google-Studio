@@ -23,7 +23,9 @@ const App: React.FC = () => {
         gameState, gameMode, difficulty, aiType, players, walls, currentPlayerId, winner,
         selectedPiece, validMoves, isPlacingWall, aiThinking, lastAiAction, apiError, gameTime, turnTime,
         showRateLimitModal, wallPlacementError, setShowRateLimitModal, configuredTurnTime, startPosition,
-        startGame, handlePieceClick, handleCellClick, handleWallClick, togglePlacingWall, returnToMenu
+        wallPreview,
+        startGame, handleCellClick, handleWallPreview, confirmWallPlacement, cancelWallPlacement,
+        togglePlacingWall, returnToMenu,
     } = useGameLogic();
 
     const [selectedMode, setSelectedMode] = useState<GameMode>(GameMode.PVC);
@@ -157,10 +159,10 @@ const App: React.FC = () => {
     const aiPlayerName = players[2]?.name || 'AI';
 
     return (
-        <main className="min-h-screen w-full bg-gray-100 flex flex-col items-center justify-between p-2 sm:p-4">
+        <main className="h-screen max-h-[100dvh] w-full bg-gray-100 flex flex-col items-center p-2 sm:p-4">
             {/* Header: Opponent Info and Game Time */}
-            <header className="w-full max-w-2xl">
-                 <div className="flex justify-between items-center w-full mb-2">
+            <header className="w-full max-w-2xl flex-shrink-0">
+                 <div className="flex justify-between items-center w-full">
                     <div className="relative">
                         {players[2] && <PlayerInfo player={players[2]} />}
                         {gameMode === GameMode.PVC && aiMessage && <AiChatTooltip message={aiMessage} />}
@@ -173,9 +175,9 @@ const App: React.FC = () => {
             </header>
 
             {/* Main Content: Turn Indicator and Game Board */}
-            <div className="w-full flex-grow flex flex-col items-center justify-center">
+            <div className="w-full flex-grow flex flex-col items-center justify-center py-1">
                 {currentPlayer && <TurnIndicator player={currentPlayer} />}
-                <div className="my-2 sm:my-4 w-full">
+                <div className="w-full">
                     <GameBoard 
                         players={players} 
                         walls={walls}
@@ -183,16 +185,17 @@ const App: React.FC = () => {
                         selectedPiece={selectedPiece}
                         validMoves={validMoves}
                         isPlacingWall={isPlacingWall}
-                        onPieceClick={handlePieceClick}
+                        wallPreview={wallPreview}
                         onCellClick={handleCellClick}
-                        onWallClick={handleWallClick}
+                        onWallPreview={handleWallPreview}
+                        onCancelWallPreview={cancelWallPlacement}
                     />
                 </div>
             </div>
 
             {/* Footer: Player Info, Turn Time, and Controls */}
-            <footer className="w-full max-w-2xl">
-                <div className="flex justify-between items-center w-full mt-2">
+            <footer className="w-full max-w-2xl flex-shrink-0">
+                <div className="flex justify-between items-center w-full">
                     <div className="text-center">
                         <p className="text-sm font-medium text-gray-500">TURN TIME</p>
                         <p className={turnTimeClasses}>{formatTime(turnTime)}</p>
@@ -200,21 +203,38 @@ const App: React.FC = () => {
                     {players[1] && <PlayerInfo player={players[1]} />}
                 </div>
 
-                <div className="flex w-full space-x-4 mt-4">
-                     <button 
-                        onClick={togglePlacingWall} 
-                        disabled={!currentPlayer || currentPlayer.wallsLeft === 0 || (gameMode === GameMode.PVC && currentPlayerId === 2)}
-                        className={`w-full py-3 rounded-lg font-bold text-white transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${isPlacingWall ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'}`}
-                      >
-                        {isPlacingWall ? 'Cancel Wall' : 'Place Wall'}
-                     </button>
-                     <button 
-                        onClick={returnToMenu}
-                        className="w-full py-3 rounded-lg font-bold text-gray-700 bg-gray-300 hover:bg-gray-400 transition-all shadow-md"
-                      >
-                        New Game
-                     </button>
-                </div>
+                {wallPreview ? (
+                     <div className="flex w-full space-x-4 mt-4">
+                         <button 
+                            onClick={cancelWallPlacement}
+                            className="w-full py-3 rounded-lg font-bold text-white bg-red-500 hover:bg-red-600 transition-all shadow-md"
+                          >
+                            Cancel
+                         </button>
+                         <button 
+                            onClick={confirmWallPlacement}
+                            className="w-full py-3 rounded-lg font-bold text-white bg-green-500 hover:bg-green-600 transition-all shadow-md"
+                          >
+                            Confirm Wall
+                         </button>
+                    </div>
+                ) : (
+                    <div className="flex w-full space-x-4 mt-4">
+                         <button 
+                            onClick={togglePlacingWall} 
+                            disabled={!currentPlayer || currentPlayer.wallsLeft === 0 || (gameMode === GameMode.PVC && currentPlayerId === 2)}
+                            className={`w-full py-3 rounded-lg font-bold text-white transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed ${isPlacingWall ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'}`}
+                          >
+                            {isPlacingWall ? 'Cancel Placing' : 'Place Wall'}
+                         </button>
+                         <button 
+                            onClick={returnToMenu}
+                            className="w-full py-3 rounded-lg font-bold text-gray-700 bg-gray-300 hover:bg-gray-400 transition-all shadow-md"
+                          >
+                            New Game
+                         </button>
+                    </div>
+                )}
             </footer>
             
             {gameState === GameState.GAME_OVER && winner && (

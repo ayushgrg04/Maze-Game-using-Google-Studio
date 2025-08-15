@@ -1,12 +1,15 @@
 
+
 import React from 'react';
 import { BOARD_SIZE } from '../constants';
-import type { Wall } from '../types';
+import type { Position, Wall } from '../types';
 
 type WallPlacementGuideProps = {
   playerColor: string;
   existingWalls: Wall[];
   onWallClick: (wall: Omit<Wall, 'playerId'>) => void;
+  wallPreview: Omit<Wall, 'playerId'> | null;
+  onCancel: () => void;
 };
 
 // Checks for direct overlaps or intersections with existing walls.
@@ -31,81 +34,104 @@ const isPlacementInvalid = (wall: Omit<Wall, 'playerId'>, existingWalls: Wall[])
   });
 };
 
-export const WallPlacementGuide: React.FC<WallPlacementGuideProps> = ({ playerColor, existingWalls, onWallClick }) => {
+export const WallPlacementGuide: React.FC<WallPlacementGuideProps> = ({ 
+    playerColor, existingWalls, onWallClick, wallPreview, onCancel,
+}) => {
     
-    const horizontalGuides = [];
+    if (wallPreview) {
+        const isHorizontal = wallPreview.orientation === 'horizontal';
+        const style: React.CSSProperties = isHorizontal ? {
+            gridRow: wallPreview.r + 1,
+            gridColumn: `${wallPreview.c + 1} / span 2`,
+            alignSelf: 'start',
+            height: '10px',
+            transform: 'translateY(-50%)',
+        } : {
+            gridRow: `${wallPreview.r + 1} / span 2`,
+            gridColumn: wallPreview.c + 1,
+            justifySelf: 'start',
+            width: '10px',
+            transform: 'translateX(-50%)',
+        };
+        
+        return (
+            <>
+                <div className="absolute inset-0 z-20" onClick={onCancel} />
+                <div 
+                    className="absolute grid z-30 pointer-events-none"
+                    style={{
+                        gridTemplateColumns: `repeat(${BOARD_SIZE}, 1fr)`,
+                        gridTemplateRows: `repeat(${BOARD_SIZE}, 1fr)`,
+                        gap: `5px`,
+                        inset: 0
+                    }}
+                >
+                    <div 
+                        className="rounded-full"
+                        style={{
+                            ...style,
+                            backgroundColor: playerColor,
+                            boxShadow: `0 0 12px ${playerColor}, 0 0 20px ${playerColor}`
+                        }}
+                    />
+                </div>
+            </>
+        );
+    }
+
+    const guides = [];
+
     // Horizontal Guides
     for (let r = 1; r < BOARD_SIZE; r++) {
         for (let c = 0; c < BOARD_SIZE - 1; c++) {
             const wall = { r, c, orientation: 'horizontal' as const };
             if (isPlacementInvalid(wall, existingWalls)) continue;
             
-            horizontalGuides.push(
-                <div // This is the Hitbox
+            guides.push(
+                <div
                     key={`h-guide-${r}-${c}`}
-                    className="group relative flex justify-center"
-                    style={{
-                        gridRow: r + 1,
-                        gridColumn: `${c + 1} / span 2`,
-                        cursor: 'pointer',
+                    className="group relative flex justify-center items-center"
+                    style={{ 
+                        gridRow: r + 1, 
+                        gridColumn: `${c + 1} / span 2`, 
+                        transform: 'translateY(calc(-50% - 2.5px))',
+                        height: '20px',
                         pointerEvents: 'auto',
-                        height: '50%',
-                        alignSelf: 'start',
+                        cursor: 'pointer',
                     }}
                     onClick={() => onWallClick(wall)}
                     aria-label={`Place horizontal wall at row ${r}, column ${c}`}
                 >
-                    {/* Default placeholder (soothing color) */}
-                    <div
-                        className="h-[10px] w-full self-start -translate-y-1/2 bg-slate-400 rounded-full opacity-40 transition-opacity duration-200 group-hover:opacity-0"
-                    />
-                    {/* Hover placeholder (player color) */}
-                    <div
-                        className="absolute top-0 left-0 h-[10px] w-full -translate-y-1/2 opacity-0 group-hover:opacity-80 transition-all duration-200 ease-in-out rounded-full group-hover:scale-y-125"
-                        style={{
-                            backgroundColor: playerColor,
-                            boxShadow: `0 0 12px ${playerColor}`,
-                        }}
-                    />
+                    <div className="h-[10px] w-full bg-slate-400 rounded-full opacity-40 transition-opacity duration-200 group-hover:opacity-0" />
+                    <div className="absolute h-[10px] w-full opacity-0 group-hover:opacity-80 transition-all duration-200 ease-in-out rounded-full group-hover:scale-y-125" style={{ backgroundColor: playerColor, boxShadow: `0 0 12px ${playerColor}` }} />
                 </div>
             );
         }
     }
     
-    const verticalGuides = [];
     // Vertical Guides
     for (let r = 0; r < BOARD_SIZE - 1; r++) {
         for (let c = 1; c < BOARD_SIZE; c++) {
             const wall = { r, c, orientation: 'vertical' as const };
             if (isPlacementInvalid(wall, existingWalls)) continue;
 
-            verticalGuides.push(
-                <div // Hitbox
+            guides.push(
+                <div
                     key={`v-guide-${r}-${c}`}
-                    className="group relative flex flex-col justify-center"
-                    style={{
-                        gridRow: `${r + 1} / span 2`,
+                    className="group relative flex justify-center items-center"
+                    style={{ 
+                        gridRow: `${r + 1} / span 2`, 
                         gridColumn: c + 1,
-                        cursor: 'pointer',
+                        transform: 'translateX(calc(-50% - 2.5px))',
+                        width: '20px',
                         pointerEvents: 'auto',
-                        width: '50%',
-                        justifySelf: 'start',
+                        cursor: 'pointer',
                     }}
                     onClick={() => onWallClick(wall)}
                     aria-label={`Place vertical wall at row ${r}, column ${c}`}
                 >
-                    {/* Default placeholder (soothing color) */}
-                    <div
-                        className="w-[10px] h-full self-start -translate-x-1/2 bg-slate-400 rounded-full opacity-40 transition-opacity duration-200 group-hover:opacity-0"
-                    />
-                    {/* Hover placeholder (player color) */}
-                    <div
-                        className="absolute top-0 left-0 w-[10px] h-full -translate-x-1/2 opacity-0 group-hover:opacity-80 transition-all duration-200 ease-in-out rounded-full group-hover:scale-x-125"
-                        style={{
-                            backgroundColor: playerColor,
-                            boxShadow: `0 0 12px ${playerColor}`,
-                        }}
-                    />
+                    <div className="w-[10px] h-full bg-slate-400 rounded-full opacity-40 transition-opacity duration-200 group-hover:opacity-0" />
+                    <div className="absolute w-[10px] h-full opacity-0 group-hover:opacity-80 transition-all duration-200 ease-in-out rounded-full group-hover:scale-x-125" style={{ backgroundColor: playerColor, boxShadow: `0 0 12px ${playerColor}` }} />
                 </div>
             );
         }
@@ -117,11 +143,11 @@ export const WallPlacementGuide: React.FC<WallPlacementGuideProps> = ({ playerCo
             style={{
                 gridTemplateColumns: `repeat(${BOARD_SIZE}, 1fr)`,
                 gridTemplateRows: `repeat(${BOARD_SIZE}, 1fr)`,
+                gap: '5px',
                 zIndex: 30,
             }}
         >
-            {horizontalGuides}
-            {verticalGuides}
+            {guides}
         </div>
     );
 };

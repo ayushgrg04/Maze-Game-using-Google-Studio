@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { BOARD_SIZE } from '../constants';
 import type { Player, Position, Wall } from '../types';
@@ -10,9 +11,10 @@ type GameBoardProps = {
   selectedPiece: Position | null;
   validMoves: Position[];
   isPlacingWall: boolean;
-  onPieceClick: (pos: Position) => void;
+  wallPreview: Omit<Wall, 'playerId'> | null;
   onCellClick: (pos: Position) => void;
-  onWallClick: (wall: Omit<Wall, 'playerId'>) => void;
+  onWallPreview: (wall: Omit<Wall, 'playerId'>) => void;
+  onCancelWallPreview: () => void;
   currentPlayerId: 1 | 2;
 };
 
@@ -25,9 +27,10 @@ const GameBoard: React.FC<GameBoardProps> = ({
   selectedPiece,
   validMoves,
   isPlacingWall,
-  onPieceClick,
+  wallPreview,
   onCellClick,
-  onWallClick,
+  onWallPreview,
+  onCancelWallPreview,
   currentPlayerId,
 }) => {
   const renderCell = (r: number, c: number) => {
@@ -46,7 +49,6 @@ const GameBoard: React.FC<GameBoardProps> = ({
       'relative aspect-square rounded-sm shadow-inner transition-colors duration-200',
       isPlayer1Goal ? 'bg-blue-100' : isPlayer2Goal ? 'bg-pink-100' : 'bg-white',
       isValidMove ? 'cursor-pointer' : '',
-      (isPlayer1Here || isPlayer2Here) && !isPlacingWall && ((isPlayer1Here && currentPlayerId === 1) || (isPlayer2Here && currentPlayerId === 2)) ? 'cursor-pointer' : '',
     ].join(' ');
     
     // --- Wall Rendering via Borders ---
@@ -89,9 +91,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
         style={cellWallStyles}
         onClick={() => {
           if (isPlacingWall) return;
-          if (isPlayer1Here || isPlayer2Here) {
-            onPieceClick({ r, c });
-          } else if (isValidMove) {
+          if (isValidMove) {
             onCellClick({ r, c });
           }
         }}
@@ -124,7 +124,9 @@ const GameBoard: React.FC<GameBoardProps> = ({
           <WallPlacementGuide 
             playerColor={currentPlayerColor}
             existingWalls={walls}
-            onWallClick={onWallClick}
+            onWallClick={onWallPreview}
+            wallPreview={wallPreview}
+            onCancel={onCancelWallPreview}
           />
         )}
       </div>
