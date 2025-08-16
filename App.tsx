@@ -38,10 +38,10 @@ const App: React.FC = () => {
         selectedPiece, validMoves, isPlacingWall, aiThinking, lastAiAction, apiError, gameTime, turnTime,
         showRateLimitModal, wallPlacementError, setShowRateLimitModal, configuredTurnTime, startPosition,
         wallPreview, onlineGameId, onlinePlayerId, onlineRequestTimeout, initialWalls,
-        isMyTurn,
+        isMyTurn, pendingJoinId,
         startGame, handleCellClick, handleWallPreview, confirmWallPlacement, cancelWallPlacement,
         togglePlacingWall, returnToMenu, handleCreateOnlineGame, handleJoinOnlineGame, handleFindMatch, handleCancelFindMatch, handleCancelCreateGame,
-        cancelAuth,
+        cancelAuth, cancelJoin,
     } = useGameLogic();
 
     type MenuScreen = 'main' | 'local_setup' | 'online_setup';
@@ -96,6 +96,20 @@ const App: React.FC = () => {
     }
 
     if (gameState === GameState.MENU) {
+        const playerName = sessionStorage.getItem('playerName') || 'Player 1';
+        if (pendingJoinId) {
+            return (
+                <JoinGamePrompt
+                    gameId={pendingJoinId}
+                    initialPlayerName={playerName}
+                    onJoin={(gameId, name) => {
+                        sessionStorage.setItem('playerName', name);
+                        handleJoinOnlineGame(gameId, name);
+                    }}
+                    onCancel={cancelJoin}
+                />
+            );
+        }
         return (
             <>
                 {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
@@ -447,6 +461,64 @@ const OnlineGameSetup: React.FC<{ playerName: string; onCreateGame: Function; on
            </div>
        </div>
     );
+};
+
+
+type JoinGamePromptProps = {
+  gameId: string;
+  initialPlayerName: string;
+  onJoin: (gameId: string, playerName: string) => void;
+  onCancel: () => void;
+};
+
+const JoinGamePrompt: React.FC<JoinGamePromptProps> = ({ gameId, initialPlayerName, onJoin, onCancel }) => {
+  const [playerName, setPlayerName] = useState(initialPlayerName);
+
+  useEffect(() => {
+    setPlayerName(initialPlayerName);
+  }, [initialPlayerName]);
+
+  const handleJoin = () => {
+    if (playerName.trim()) {
+      onJoin(gameId, playerName.trim());
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-gray-100 flex items-center justify-center p-4">
+        <Modal title="Join Private Game" onClose={onCancel}>
+          <div className="space-y-6 text-center">
+            <p className="text-gray-600">You've been invited to a game!</p>
+            <div>
+              <label htmlFor="joinPlayerName" className="text-lg font-semibold mb-2 text-gray-600 block">Your Name</label>
+              <input
+                type="text"
+                id="joinPlayerName"
+                value={playerName}
+                onChange={(e) => setPlayerName(e.target.value)}
+                className="w-full p-3 rounded-lg bg-gray-200 border-2 border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 transition text-center"
+                placeholder="Enter your name"
+              />
+            </div>
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={handleJoin}
+                disabled={!playerName.trim()}
+                className="w-full bg-green-500 text-white font-bold py-3 rounded-lg hover:bg-green-600 transition-all shadow-lg text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Join Game
+              </button>
+              <button 
+                onClick={onCancel}
+                className="w-full bg-gray-600 text-white font-bold py-3 rounded-lg hover:bg-gray-500 transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </Modal>
+    </div>
+  );
 };
 
 export default App;

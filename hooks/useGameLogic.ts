@@ -39,6 +39,7 @@ const useGameLogic = () => {
   const [onlineRequestTimeout, setOnlineRequestTimeout] = useState<number | null>(null);
   const [initialWalls, setInitialWalls] = useState(10);
   const [pendingGameStartArgs, setPendingGameStartArgs] = useState<any>(null);
+  const [pendingJoinId, setPendingJoinId] = useState<string | null>(null);
 
 
   const resetGameState = useCallback((isForfeit: boolean = false) => {
@@ -62,6 +63,7 @@ const useGameLogic = () => {
     setOnlineGameId(null);
     setOnlinePlayerId(null);
     setPendingGameStartArgs(null);
+    setPendingJoinId(null);
 
   }, [configuredTurnTime, onlineGameId, onlineRequestTimeout]);
   
@@ -99,6 +101,10 @@ const useGameLogic = () => {
   const cancelAuth = useCallback(() => {
     setPendingGameStartArgs(null);
     setGameState(GameState.MENU);
+  }, []);
+
+  const cancelJoin = useCallback(() => {
+    setPendingJoinId(null);
   }, []);
 
   const returnToMenu = useCallback(() => {
@@ -263,7 +269,7 @@ const useGameLogic = () => {
           setGameState(GameState.GAME_OVER);
       } else if (gameHasStarted) {
           setGameState(currentGameState => 
-              currentGameState === GameState.ONLINE_WAITING ? GameState.PLAYING : currentGameState
+              currentGameState === GameState.ONLINE_WAITING || currentGameState === GameState.MENU ? GameState.PLAYING : currentGameState
           );
       }
   }, [onlineRequestTimeout]);
@@ -367,12 +373,14 @@ const useGameLogic = () => {
       if (initialState) {
         setOnlineGameId(gameId);
         setOnlinePlayerId(2);
+        setPendingJoinId(null);
         setConfiguredTurnTime(initialState.turnTime);
         setInitialWalls(initialState.players[1].wallsLeft);
         setGameMode(GameMode.PVO);
         updateStateFromOnline(initialState);
       } else {
         setApiError("Could not join game. It might be full or expired.");
+        setPendingJoinId(null); // Clear the ID on failure
       }
   }, [updateStateFromOnline]);
   
@@ -564,7 +572,7 @@ const useGameLogic = () => {
         if (fetchedState && (fetchedState.currentPlayerId === onlinePlayerId || fetchedState.winner)) {
             updateStateFromOnline(fetchedState);
         }
-    }, 2000); // Poll every 2 seconds
+    }, 1000); // Poll every 1 second
 
     return () => clearInterval(intervalId);
   }, [gameState, gameMode, onlineGameId, currentPlayerId, onlinePlayerId, winner, updateStateFromOnline]);
@@ -574,11 +582,10 @@ const useGameLogic = () => {
     const params = new URLSearchParams(window.location.search);
     const gameId = params.get('join');
     if (gameId) {
-      const p2Name = sessionStorage.getItem('playerName') || 'Player 2';
-      handleJoinOnlineGame(gameId, p2Name);
+      setPendingJoinId(gameId);
       window.history.replaceState({}, document.title, window.location.pathname); 
     }
-  }, [handleJoinOnlineGame]);
+  }, []);
 
 
   const handleWallPreview = useCallback((wall: Omit<Wall, 'playerId'>) => setWallPreview(wall), []);
@@ -673,6 +680,7 @@ const useGameLogic = () => {
     configuredTurnTime, startPosition, wallPreview, onlineGameId, onlinePlayerId, onlineRequestTimeout,
     initialWalls,
     isMyTurn, // This is now the source of truth for UI interactivity
+    pendingJoinId,
     setShowRateLimitModal,
     startGame, handleCellClick: handleMove,
     handleWallPreview,
@@ -680,6 +688,7 @@ const useGameLogic = () => {
     togglePlacingWall, returnToMenu,
     handleCreateOnlineGame, handleJoinOnlineGame, handleFindMatch, handleCancelFindMatch, handleCancelCreateGame,
     cancelAuth,
+    cancelJoin,
   };
 };
 

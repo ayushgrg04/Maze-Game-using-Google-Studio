@@ -15,9 +15,7 @@ class AuthService {
     private initPromise: Promise<void> | null = null;
 
     constructor() {
-        if (typeof window !== 'undefined') {
-            this.initialize();
-        }
+        // Initialization is now lazy, called only when signIn() is triggered.
     }
     
     private initialize(): Promise<void> {
@@ -28,8 +26,7 @@ class AuthService {
                         if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com") {
                             const errorMsg = "Google Client ID is not configured. Please set the GOOGLE_CLIENT_ID constant in services/authService.ts.";
                             console.error(errorMsg);
-                            // We alert the user because this is a developer configuration error, not a runtime user error.
-                            alert(errorMsg); 
+                            // Reject the promise without alerting. The alert is handled by the caller.
                             reject(new Error(errorMsg));
                             return;
                         }
@@ -77,10 +74,10 @@ class AuthService {
             } else {
                 throw new Error("Token client is not available after initialization.");
             }
-        } catch(error) {
+        } catch(error: any) {
              console.error("Sign-in failed:", error);
-             // The detailed error is alerted during initialization. This is a fallback.
-             alert("Could not start the sign-in process. Please check the console for errors and ensure the Google Client ID is configured correctly.");
+             // Alert the specific error message to the user at the time of action.
+             alert(`Sign-in failed:\n${error.message}`);
         }
     }
     

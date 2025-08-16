@@ -174,7 +174,7 @@ class OnlineGameService {
                 client.removeListener('message', messageHandler);
                 client.unsubscribe(topic);
                 resolve(null);
-            }, 2000); // Shorter 2-second timeout for polling
+            }, 950); // Shorter timeout for polling to match 1s interval
 
             const messageHandler = (t: string, payload: Uint8Array) => {
                 if (t === topic) {
