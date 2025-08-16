@@ -1,15 +1,15 @@
 
 
-
-
 import React, { useState, useEffect } from 'react';
 import useGameLogic from './hooks/useGameLogic';
 import GameBoard from './components/GameBoard';
 import PlayerInfo from './components/PlayerInfo';
 import Modal from './components/Modal';
 import HelpModal from './components/HelpModal';
+import GoogleSignInModal from './components/GoogleSignInModal';
 import { AiChatTooltip } from './components/AiChatTooltip';
 import { GameState, GameMode, Difficulty, Player, AiType, StartPosition } from './types';
+import { authService } from './services/authService';
 
 const TurnIndicator: React.FC<{player: Player}> = ({ player }) => (
     <div className="bg-white rounded-full shadow-md px-4 py-2 flex items-center space-x-3">
@@ -41,6 +41,7 @@ const App: React.FC = () => {
         isMyTurn,
         startGame, handleCellClick, handleWallPreview, confirmWallPlacement, cancelWallPlacement,
         togglePlacingWall, returnToMenu, handleCreateOnlineGame, handleJoinOnlineGame, handleFindMatch, handleCancelFindMatch, handleCancelCreateGame,
+        cancelAuth,
     } = useGameLogic();
 
     type MenuScreen = 'main' | 'local_setup' | 'online_setup';
@@ -108,6 +109,10 @@ const App: React.FC = () => {
                 </div>
             </>
         );
+    }
+    
+    if (gameState === GameState.AWAITING_AUTH) {
+        return <GoogleSignInModal onSignIn={() => authService.signIn()} onCancel={cancelAuth} />;
     }
     
     // Guard against rendering the game screen before player data is ready, preventing crashes.
