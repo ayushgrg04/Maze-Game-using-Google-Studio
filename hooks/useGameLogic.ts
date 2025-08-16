@@ -173,12 +173,12 @@ const useGameLogic = () => {
     setValidMoves(valid);
   }, [players, walls, currentPlayerId]);
   
-  // --- Perspective Transformation Logic for Online Games ---
+  // --- Perspective Transformation Logic for Online Games (180-degree rotation) ---
   const isPlayer2Perspective = gameMode === GameMode.PVO && onlinePlayerId === 2;
   
   const transformPosition = useCallback((pos: Position | null): Position | null => {
       if (!pos || !isPlayer2Perspective) return pos;
-      return { r: BOARD_SIZE - 1 - pos.r, c: pos.c };
+      return { r: BOARD_SIZE - 1 - pos.r, c: BOARD_SIZE - 1 - pos.c };
   }, [isPlayer2Perspective]);
 
   const untransformPosition = transformPosition; // The function is its own inverse
@@ -186,10 +186,18 @@ const useGameLogic = () => {
   const transformWall = useCallback((wall: Omit<Wall, 'playerId'> | null): Omit<Wall, 'playerId'> | null => {
       if (!wall || !isPlayer2Perspective) return wall;
       if (wall.orientation === 'horizontal') {
-          return { ...wall, r: BOARD_SIZE - wall.r };
+          return {
+              ...wall,
+              r: BOARD_SIZE - wall.r,
+              c: BOARD_SIZE - 2 - wall.c,
+          };
       }
       // vertical wall
-      return { ...wall, r: BOARD_SIZE - 2 - wall.r };
+      return {
+          ...wall,
+          r: BOARD_SIZE - 2 - wall.r,
+          c: BOARD_SIZE - wall.c,
+      };
   }, [isPlayer2Perspective]);
 
   const untransformWall = transformWall; // This is also its own inverse
@@ -391,7 +399,7 @@ const useGameLogic = () => {
     // Add a random "thinking" delay ONLY for the local AI to feel more human.
     // Gemini AI has natural network latency, so no artificial delay is needed.
     if (aiType === AiType.LOCAL) {
-      const randomDelay = Math.random() * 4000 + 1000; // 1 to 5 seconds
+      const randomDelay = Math.random() * 1000 + 1000; // 1 to 2 seconds
       await delay(randomDelay);
     }
 

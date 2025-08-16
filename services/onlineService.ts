@@ -1,9 +1,3 @@
-
-
-
-
-
-
 import mqtt from 'mqtt';
 import type { MqttClient } from 'mqtt';
 import { BOARD_SIZE } from '../constants';
@@ -71,7 +65,7 @@ class OnlineGameService {
         return this.connectionPromise;
     }
     
-    private handleMessage(topic: string, message: Buffer) {
+    private handleMessage(topic: string, message: Uint8Array) {
         try {
             const msgStr = message.toString();
             if (!msgStr) return;
@@ -156,7 +150,7 @@ class OnlineGameService {
                 resolve(null);
             }, 8000); // 8-second timeout
 
-            const messageHandler = (t: string, payload: Buffer) => {
+            const messageHandler = (t: string, payload: Uint8Array) => {
                 if (t === topic) {
                     clearTimeout(timeoutId);
                     client.removeListener('message', messageHandler);
@@ -182,7 +176,7 @@ class OnlineGameService {
                 resolve(null);
             }, 2000); // Shorter 2-second timeout for polling
 
-            const messageHandler = (t: string, payload: Buffer) => {
+            const messageHandler = (t: string, payload: Uint8Array) => {
                 if (t === topic) {
                     clearTimeout(timeoutId);
                     client.removeListener('message', messageHandler);
