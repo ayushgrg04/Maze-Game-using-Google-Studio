@@ -18,7 +18,7 @@ type GameBoardProps = {
   currentPlayerId: 1 | 2;
 };
 
-const WALL_THICKNESS = 6; // in pixels
+const WALL_THICKNESS = 8; // in pixels
 const GRID_GAP = 5; // in pixels
 
 const GameBoard: React.FC<GameBoardProps> = ({
@@ -52,22 +52,6 @@ const GameBoard: React.FC<GameBoardProps> = ({
       isPlayer1Goal ? 'bg-blue-100' : isPlayer2Goal ? 'bg-pink-100' : 'bg-white',
       isValidMove ? 'cursor-pointer' : '',
     ].join(' ');
-    
-    // --- Wall Rendering via Borders ---
-    const cellWallStyles: React.CSSProperties = { boxSizing: 'border-box' };
-    const wallThicknessPx = `${WALL_THICKNESS}px`;
-    
-    // Check for a horizontal wall just ABOVE this cell
-    const wallAbove = walls.find(wall => wall.orientation === 'horizontal' && wall.r === r && (wall.c === c || wall.c === c - 1));
-    if (wallAbove) {
-        cellWallStyles.borderTop = `${wallThicknessPx} solid ${players[wallAbove.playerId]?.color || '#111827'}`;
-    }
-    
-    // Check for a vertical wall to the LEFT of this cell
-    const wallLeft = walls.find(wall => wall.orientation === 'vertical' && wall.c === c && (wall.r === r || wall.r === r - 1));
-    if (wallLeft) {
-        cellWallStyles.borderLeft = `${wallThicknessPx} solid ${players[wallLeft.playerId]?.color || '#111827'}`;
-    }
 
     const playerPiece = (player: Player, isSelectedFlag: boolean) => (
       <div
@@ -90,7 +74,6 @@ const GameBoard: React.FC<GameBoardProps> = ({
       <div
         key={`cell-${r}-${c}`}
         className={cellClasses}
-        style={cellWallStyles}
         onClick={() => {
           if (isPlacingWall) return;
           if (isValidMove) {
@@ -113,6 +96,35 @@ const GameBoard: React.FC<GameBoardProps> = ({
     );
   };
 
+  const renderWall = (wall: Wall) => {
+    const wallColor = players[wall.playerId]?.color || '#111827';
+    const isHorizontal = wall.orientation === 'horizontal';
+
+    const style: React.CSSProperties = isHorizontal ? {
+        gridRow: wall.r + 1,
+        gridColumn: `${wall.c + 1} / span 2`,
+        alignSelf: 'start',
+        height: `${WALL_THICKNESS}px`,
+        transform: `translateY(-${WALL_THICKNESS / 2}px)`,
+        margin: `0 ${GRID_GAP / 2}px`, // Add horizontal margin to not overlap vertical walls
+    } : { // Vertical
+        gridRow: `${wall.r + 1} / span 2`,
+        gridColumn: wall.c + 1,
+        justifySelf: 'start',
+        width: `${WALL_THICKNESS}px`,
+        transform: `translateX(-${WALL_THICKNESS / 2}px)`,
+        margin: `${GRID_GAP / 2}px 0`, // Add vertical margin
+    };
+
+    return (
+        <div
+            key={`wall-${wall.orientation}-${wall.r}-${wall.c}`}
+            className="rounded-full shadow-md"
+            style={{ ...style, backgroundColor: wallColor }}
+        />
+    );
+  };
+
   return (
     <div className="aspect-square w-full max-w-[95vw] sm:max-w-md md:max-w-lg lg:max-w-2xl mx-auto p-2 bg-slate-200 rounded-2xl shadow-lg">
       <div
@@ -126,6 +138,19 @@ const GameBoard: React.FC<GameBoardProps> = ({
         {Array.from({ length: BOARD_SIZE * BOARD_SIZE }).map((_, i) =>
           renderCell(Math.floor(i / BOARD_SIZE), i % BOARD_SIZE)
         )}
+        
+        {/* Wall Layer: Absolutely positioned overlay grid for rendering walls without affecting the main grid flow */}
+        <div 
+          className="absolute inset-0 grid pointer-events-none"
+          style={{
+            gridTemplateColumns: `repeat(${BOARD_SIZE}, 1fr)`,
+            gridTemplateRows: `repeat(${BOARD_SIZE}, 1fr)`,
+            gap: `${GRID_GAP}px`,
+            zIndex: 20,
+          }}
+        >
+            {walls.map(renderWall)}
+        </div>
         
         {isPlacingWall && currentPlayerColor && (
           <WallPlacementGuide 
