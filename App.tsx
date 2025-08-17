@@ -229,18 +229,20 @@ const App: React.FC = () => {
                   )}
                 </div>
                 <div className="w-full flex-1 flex items-center justify-center min-h-0">
-                    <GameBoard 
-                        players={players} 
-                        walls={walls}
-                        currentPlayerId={currentPlayerId}
-                        selectedPiece={selectedPiece}
-                        validMoves={validMoves}
-                        isPlacingWall={isPlacingWall}
-                        wallPreview={wallPreview}
-                        onCellClick={handleCellClick}
-                        onWallPreview={handleWallPreview}
-                        onCancelWallPreview={cancelWallPlacement}
-                    />
+                    <div className="aspect-square max-w-full max-h-full">
+                        <GameBoard 
+                            players={players} 
+                            walls={walls}
+                            currentPlayerId={currentPlayerId}
+                            selectedPiece={selectedPiece}
+                            validMoves={validMoves}
+                            isPlacingWall={isPlacingWall}
+                            wallPreview={wallPreview}
+                            onCellClick={handleCellClick}
+                            onWallPreview={handleWallPreview}
+                            onCancelWallPreview={cancelWallPlacement}
+                        />
+                    </div>
                 </div>
             </div>
 

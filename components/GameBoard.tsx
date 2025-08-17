@@ -164,7 +164,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
   };
 
   return (
-    <div className="aspect-square max-w-full max-h-full p-2 bg-black/20 rounded-2xl shadow-lg border border-purple-500/30">
+    <div className="w-full h-full p-2 bg-black/20 rounded-2xl shadow-lg border border-purple-500/30">
       <div
         className="relative grid h-full w-full"
         style={{
