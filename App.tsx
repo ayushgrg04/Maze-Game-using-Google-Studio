@@ -8,6 +8,7 @@ import GoogleSignInModal from './components/GoogleSignInModal';
 import { AiChatTooltip } from './components/AiChatTooltip';
 import { GameState, GameMode, Difficulty, Player, AiType, StartPosition } from './types';
 import { authService } from './services/authService';
+import { AnimatedMenuBackground } from './components/AnimatedMenuBackground';
 
 const TurnIndicator: React.FC<{player: Player}> = ({ player }) => (
     <div className="magical-container rounded-full px-4 py-2 flex items-center space-x-3">
@@ -30,56 +31,45 @@ const TurnTimer: React.FC<{ turnTime: number; player: Player | undefined }> = ({
     );
 };
 
-const MenuBackground: React.FC = () => {
+const Celebration: React.FC = () => {
+  const particles = Array.from({ length: 50 }); // More particles for a fuller effect
+  const colors = ['#f59e0b', '#ec4899', '#3b82f6', '#22c55e', '#a855f7'];
+
   return (
-    <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden="true">
-      <div className="absolute inset-0 bg-gradient-to-b from-[var(--dark-bg-start)] to-[var(--dark-bg-end)]"></div>
-      <div className="absolute inset-0 filter blur-sm brightness-60 scale-110">
-        <div 
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vmin] h-[80vmin] max-w-lg max-h-lg"
-        >
-          <div
-            className="relative grid h-full w-full rounded-2xl"
-            style={{
-              gridTemplateColumns: `repeat(9, 1fr)`,
-              gridTemplateRows: `repeat(9, 1fr)`,
-              gap: `5px`,
-              background: 'radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, rgba(0,0,0,0) 70%)',
-              border: '1px solid rgba(168, 85, 247, 0.3)',
-            }}
-          >
-            {/* Intersections */}
-            {Array.from({ length: 8 * 8 }).map((_, i) => (
-              <div
-                key={`dot-bg-${i}`}
-                className="rounded-full"
-                style={{
-                  gridRow: Math.floor(i / 8) + 2,
-                  gridColumn: (i % 8) + 2,
-                  justifySelf: 'start',
-                  alignSelf: 'start',
-                  width: '6px',
-                  height: '6px',
-                  backgroundColor: 'var(--glow-purple)',
-                  opacity: 0.4,
-                  boxShadow: '0 0 8px var(--glow-purple)',
-                  transform: 'translate(-50%, -50%)'
-                }}
-              />
-            ))}
-            {/* Player pieces */}
-            <div className="absolute w-[10%] h-[10%] rounded-full" style={{ top: '5%', left: '45%', backgroundColor: '#ec4899', boxShadow: '0 0 15px #ec4899' }} />
-            <div className="absolute w-[10%] h-[10%] rounded-full" style={{ bottom: '5%', left: '45%', backgroundColor: '#3b82f6', boxShadow: '0 0 15px #3b82f6' }} />
-            
-            {/* Walls */}
-            <div className="absolute rounded-full" style={{ top: '33%', left: '22%', width:'22%', height: '8px',  backgroundColor: '#ec4899', boxShadow: '0 0 10px #ec4899' }} />
-            <div className="absolute rounded-full" style={{ bottom: '22%', right: '22%', width:'8px', height: '22%', backgroundColor: '#3b82f6', boxShadow: '0 0 10px #3b82f6' }} />
-          </div>
-        </div>
-      </div>
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-40">
+      {particles.map((_, i) => (
+        <div
+          key={i}
+          className="absolute rounded-full animate-celebrate"
+          style={{
+            left: `${Math.random() * 100}%`,
+            bottom: '-30px',
+            width: `${Math.random() * 8 + 6}px`, // slightly larger
+            height: `${Math.random() * 8 + 6}px`,
+            backgroundColor: colors[Math.floor(Math.random() * colors.length)],
+            boxShadow: `0 0 8px ${colors[Math.floor(Math.random() * colors.length)]}`,
+            animationDelay: `${Math.random() * 4}s`,
+            animationDuration: `${Math.random() * 3 + 3.5}s`,
+            opacity: Math.random() * 0.6 + 0.4,
+          }}
+        />
+      ))}
     </div>
   );
 };
+
+const BackButton: React.FC<{ onClick: () => void; className?: string }> = ({ onClick, className }) => (
+  <button
+    onClick={onClick}
+    className={`absolute top-4 left-4 p-2 rounded-full bg-black/30 hover:bg-black/50 text-gray-300 hover:text-white transition-all button-glow z-10 ${className}`}
+    aria-label="Go back"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+    </svg>
+  </button>
+);
+
 
 const App: React.FC = () => {
     const {
@@ -98,6 +88,7 @@ const App: React.FC = () => {
     const [aiMessage, setAiMessage] = useState<string | null>(null);
     const [errorToast, setErrorToast] = useState<string | null>(null);
     const [showHelp, setShowHelp] = useState(false);
+    const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
     
     useEffect(() => {
         if (lastAiAction?.reasoning) {
@@ -116,14 +107,6 @@ const App: React.FC = () => {
         }
     }, [apiError, wallPlacementError]);
     
-    useEffect(() => {
-        const starsContainer = document.getElementById('stars-container');
-        if (starsContainer) {
-          starsContainer.style.display = gameState === GameState.MENU ? 'none' : 'block';
-        }
-      }, [gameState]);
-
-
     const renderMenu = () => {
         const playerName = sessionStorage.getItem('playerName') || 'Player 1';
 
@@ -168,10 +151,12 @@ const App: React.FC = () => {
         }
         return (
             <>
-                <MenuBackground />
+                <AnimatedMenuBackground />
+
                 {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
-                 <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4">
-                    <div className="w-full max-w-md magical-container p-6 md:p-8 rounded-2xl">
+
+                <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4">
+                    <div className="w-full max-w-md magical-container p-6 md:p-8 rounded-2xl relative">
                         {renderMenu()}
                         <div className="mt-6">
                            <button onClick={() => setShowHelp(true)} className="w-full bg-purple-600 text-white font-bold py-3 rounded-lg button-glow button-glow-purple transition-all text-lg">How to Play</button>
@@ -269,12 +254,14 @@ const App: React.FC = () => {
                          <button onClick={togglePlacingWall} disabled={!currentPlayer || currentPlayer.wallsLeft === 0 || !isMyTurn} className={`w-full py-3 rounded-lg font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed button-glow ${isPlacingWall ? 'bg-red-500 button-glow-red' : 'bg-blue-500 button-glow-blue'}`}>
                             {isPlacingWall ? 'Cancel' : 'Place Wall'}
                          </button>
-                         <button onClick={returnToMenu} className="w-full py-3 rounded-lg font-bold text-white bg-purple-600 button-glow button-glow-purple">New Game</button>
+                         <button onClick={() => setShowNewGameConfirm(true)} className="w-full py-3 rounded-lg font-bold text-white bg-purple-600 button-glow button-glow-purple">New Game</button>
                     </div>
                 )}
             </footer>
             
             {gameState === GameState.GAME_OVER && winner && (
+                <>
+                {winner.id === (onlinePlayerId ?? 1) && <Celebration />}
                 <Modal title="Game Over!">
                     <div className="text-center">
                         <h3 className={`text-4xl font-magic mb-2`} style={{color: winner.color, textShadow: `0 0 10px ${winner.color}`}}>{winner.name} wins!</h3>
@@ -290,6 +277,7 @@ const App: React.FC = () => {
                         </div>
                     </div>
                 </Modal>
+                </>
             )}
             {gameState === GameState.ONLINE_WAITING && (
                 <WaitingForOpponentModal 
@@ -307,13 +295,38 @@ const App: React.FC = () => {
                     </div>
                 </Modal>
             )}
+            {showNewGameConfirm && (
+                <Modal title="Start New Game?" onClose={() => setShowNewGameConfirm(false)}>
+                    <div className="text-center space-y-4">
+                        <p className="text-gray-300">Are you sure? Your current game progress will be lost.</p>
+                        <div className="flex gap-4 mt-6">
+                            <button onClick={() => setShowNewGameConfirm(false)} className="w-full py-3 rounded-lg font-bold text-white bg-gray-600 hover:bg-gray-700 transition-all">Cancel</button>
+                            <button onClick={() => { setShowNewGameConfirm(false); returnToMenu(); }} className="w-full py-3 rounded-lg font-bold text-white bg-red-500 button-glow button-glow-red">Confirm</button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
             {errorToast && (
                 <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-red-900/80 border border-red-500 text-red-200 px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50 animate-fade-in-down backdrop-blur-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     <span className="font-semibold">{errorToast}</span>
                 </div>
             )}
-            <style>{`@keyframes fade-in-down{0%{opacity:0;transform:translate(-50%,-20px)}100%{opacity:1;transform:translate(-50%,0)}}.animate-fade-in-down{animation:fade-in-down .5s ease-out forwards}`}</style>
+            <style>{`
+                @keyframes fade-in-down{from{opacity:0;transform:translate(-50%,-20px)}to{opacity:1;transform:translate(-50%,0)}}
+                .animate-fade-in-down{animation:fade-in-down .5s ease-out forwards}
+
+                @keyframes celebrate {
+                    0% { transform: translateY(0) scale(1); opacity: 1; }
+                    100% { transform: translateY(-120vh) scale(0.5); opacity: 0; }
+                }
+                .animate-celebrate {
+                    animation-name: celebrate;
+                    animation-timing-function: linear;
+                    animation-iteration-count: 1;
+                    animation-fill-mode: forwards;
+                }
+            `}</style>
         </main>
     );
 };
@@ -441,8 +454,8 @@ const LocalGameSetup: React.FC<{ playerName: string; onStartGame: Function; onBa
 
     return (
       <div className="space-y-4 animate-fade-in-down">
-          <button onClick={props.onBack} className="text-sm font-semibold text-gray-400 hover:text-white">{'< Back'}</button>
-          <h2 className="text-2xl font-bold text-center text-white">Local Game Setup</h2>
+          <BackButton onClick={props.onBack} />
+          <h2 className="text-2xl font-bold text-center text-white pt-8">Local Game Setup</h2>
           <div className="flex gap-4">
               <SetupButton active={mode === GameMode.PVP} onClick={() => setMode(GameMode.PVP)} color="blue">Player vs Player</SetupButton>
               <SetupButton active={mode === GameMode.PVC} onClick={() => setMode(GameMode.PVC)} color="pink">Player vs AI</SetupButton>
@@ -493,8 +506,8 @@ const OnlineGameSetup: React.FC<{ playerName: string; onCreateGame: Function; on
 
     return (
        <div className="space-y-4 animate-fade-in-down">
-           <button onClick={props.onBack} className="text-sm font-semibold text-gray-400 hover:text-white">{'< Back'}</button>
-           <h2 className="text-2xl font-bold text-center text-white">Online Multiplayer</h2>
+           <BackButton onClick={props.onBack} />
+           <h2 className="text-2xl font-bold text-center text-white pt-8">Online Multiplayer</h2>
            <div className="p-4 bg-black/20 rounded-lg space-y-3">
               <h3 className="font-semibold text-gray-300 mb-2">Game Options</h3>
                   <label htmlFor="turnTimeOnline" className="text-gray-300 block">Time Per Move: {duration}s</label>
@@ -554,22 +567,15 @@ const JoinGamePrompt: React.FC<JoinGamePromptProps> = ({ gameId, initialPlayerNa
                 id="joinPlayerName"
                 value={playerName}
                 onChange={(e) => setPlayerName(e.target.value)}
-                className="w-full p-3 rounded-lg bg-black/30 border-2 border-purple-500/50 focus:outline-none focus:ring-2 focus:ring-purple-400 transition text-center"
+                className="w-full p-3 rounded-lg bg-black/30 border-2 border-purple-500/50 focus:outline-none focus:ring-2 focus:ring-purple-400 transition"
                 placeholder="Enter your name"
               />
             </div>
-            <div className="flex flex-col gap-3">
-              <button 
-                onClick={handleJoin}
-                disabled={!playerName.trim()}
-                className="w-full bg-green-500 text-white font-bold py-3 rounded-lg button-glow button-glow-green text-lg disabled:opacity-50"
-              >
+            <div className="flex flex-col gap-4">
+              <button onClick={handleJoin} className="w-full bg-green-500 text-white font-bold py-3 rounded-lg button-glow button-glow-green">
                 Join Game
               </button>
-              <button 
-                onClick={onCancel}
-                className="w-full bg-purple-600 text-white font-bold py-3 rounded-lg button-glow button-glow-purple"
-              >
+              <button onClick={onCancel} className="w-full bg-red-500 text-white font-bold py-3 rounded-lg button-glow button-glow-red">
                 Cancel
               </button>
             </div>

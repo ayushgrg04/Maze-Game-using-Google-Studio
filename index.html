@@ -112,38 +112,7 @@
 </script>
 </head>
   <body class="bg-magical-night">
-    <div id="stars-container" class="absolute inset-0 pointer-events-none"></div>
-    <div id="root" class="relative z-10"></div>
+    <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
-    <script>
-      // Starry background script
-      const container = document.getElementById('stars-container');
-      const numStars = 200;
-      for (let i = 0; i < numStars; i++) {
-        const star = document.createElement('div');
-        star.style.position = 'absolute';
-        star.style.backgroundColor = 'white';
-        star.style.borderRadius = '50%';
-        const size = Math.random() * 2 + 1;
-        star.style.width = size + 'px';
-        star.style.height = size + 'px';
-        star.style.left = Math.random() * 100 + 'vw';
-        star.style.top = Math.random() * 100 + 'vh';
-        star.style.opacity = Math.random() * 0.5 + 0.5;
-        const duration = Math.random() * 5 + 3;
-        star.style.animation = `twinkle ${duration}s infinite alternate`;
-        container.appendChild(star);
-      }
-
-      const styleSheet = document.createElement("style");
-      styleSheet.type = "text/css";
-      styleSheet.innerText = `
-        @keyframes twinkle {
-          0% { opacity: ${Math.random() * 0.5}; }
-          100% { opacity: ${Math.random() * 0.5 + 0.5}; }
-        }
-      `;
-      document.head.appendChild(styleSheet);
-    </script>
   </body>
 </html>
