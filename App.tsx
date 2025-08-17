@@ -198,8 +198,8 @@ const App: React.FC = () => {
     const aiPlayerName = players[2]?.name || 'AI';
 
     return (
-        <main className={`h-screen max-h-[100dvh] w-full flex flex-col items-center p-2 sm:p-4 bg-gradient-to-b from-[var(--dark-bg-start)] to-[var(--dark-bg-end)] overflow-hidden`}>
-            <header className="w-full max-w-2xl flex-shrink-0">
+        <main className={`h-screen max-h-[100dvh] w-full grid grid-rows-[auto_1fr_auto] p-2 sm:p-4 bg-gradient-to-b from-[var(--dark-bg-start)] to-[var(--dark-bg-end)] overflow-hidden`}>
+            <header className="w-full max-w-2xl flex-shrink-0 mx-auto">
                  <div className="flex justify-between items-center w-full">
                     <div className="relative flex-1">
                         <div className="inline-block relative">
@@ -217,7 +217,7 @@ const App: React.FC = () => {
                 </div>
             </header>
 
-            <div className="w-full flex-grow flex flex-col items-center justify-center py-1 min-h-0">
+            <div className="w-full flex flex-col items-center justify-center py-1 min-h-0">
                 <div className="h-12 flex items-center justify-center my-1 flex-shrink-0">
                   {aiThinking ? (
                      <div className="magical-container p-3 rounded-full flex items-center gap-3 z-10">
@@ -246,7 +246,7 @@ const App: React.FC = () => {
                 </div>
             </div>
 
-            <footer className="w-full max-w-2xl flex-shrink-0">
+            <footer className="w-full max-w-2xl flex-shrink-0 mx-auto">
                 <div className="flex justify-between items-center w-full">
                     <div className="flex-1 flex justify-start">
                         {currentPlayer?.id === myPlayer?.id && <TurnTimer turnTime={turnTime} player={currentPlayer} />}
