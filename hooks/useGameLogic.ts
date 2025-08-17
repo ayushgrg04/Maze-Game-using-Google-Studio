@@ -179,29 +179,33 @@ const useGameLogic = () => {
   }, [gameState, handleAuthSuccess]);
 
 
-  const isValidWallPlacement = useCallback((wall: Wall, currentWalls: Wall[], p1: Player, p2: Player): boolean => {
+  const isValidWallPlacement = useCallback((wall: Wall, currentWalls: Wall[], p1: Player, p2: Player): true | string => {
     const player = p1.id === wall.playerId ? p1 : p2;
-    if (!player || player.wallsLeft === 0) return false;
+    if (!player || player.wallsLeft <= 0) return "You have no walls left.";
     
-    if (wall.orientation === 'horizontal' && (wall.c < 0 || wall.c >= BOARD_SIZE - 1 || wall.r <= 0 || wall.r >= BOARD_SIZE)) return false;
-    if (wall.orientation === 'vertical' && (wall.r < 0 || wall.r >= BOARD_SIZE - 1 || wall.c <= 0 || wall.c >= BOARD_SIZE)) return false;
+    if (wall.orientation === 'horizontal' && (wall.c < 0 || wall.c >= BOARD_SIZE - 1 || wall.r <= 0 || wall.r >= BOARD_SIZE)) return "Wall placement is out of bounds.";
+    if (wall.orientation === 'vertical' && (wall.r < 0 || wall.r >= BOARD_SIZE - 1 || wall.c <= 0 || wall.c >= BOARD_SIZE)) return "Wall placement is out of bounds.";
 
     for (const w of currentWalls) {
-        if (w.r === wall.r && w.c === wall.c && w.orientation === wall.orientation) return false; 
+        if (w.r === wall.r && w.c === wall.c && w.orientation === wall.orientation) return "A wall already exists there.";
+        
         if (wall.orientation === 'horizontal') {
-            if (w.orientation === 'horizontal' && w.r === wall.r && Math.abs(w.c - wall.c) < 2) return false;
-            if (w.orientation === 'vertical' && w.r === wall.r - 1 && w.c === wall.c + 1) return false;
-        } else {
-            if (w.orientation === 'vertical' && w.c === wall.c && Math.abs(w.r - wall.r) < 2) return false;
-            if (w.orientation === 'horizontal' && w.r === wall.r + 1 && w.c === wall.c - 1) return false;
+            if (w.orientation === 'horizontal' && w.r === wall.r && Math.abs(w.c - wall.c) < 2) return "Walls cannot overlap.";
+            if (w.orientation === 'vertical' && w.r === wall.r - 1 && w.c === wall.c + 1) return "Walls cannot cross each other.";
+        } else { // vertical
+            if (w.orientation === 'vertical' && w.c === wall.c && Math.abs(w.r - wall.r) < 2) return "Walls cannot overlap.";
+            if (w.orientation === 'horizontal' && w.r === wall.r + 1 && w.c === wall.c - 1) return "Walls cannot cross each other.";
         }
     }
 
     const newWalls = [...currentWalls, wall];
     const p1PathExists = findShortestPath(p1.position, p1.goalRow, newWalls, p2.position) !== null;
+    if (!p1PathExists) return `This wall would trap ${p1.name}.`;
+
     const p2PathExists = findShortestPath(p2.position, p2.goalRow, newWalls, p1.position) !== null;
+    if (!p2PathExists) return `This wall would trap ${p2.name}.`;
     
-    return p1PathExists && p2PathExists;
+    return true;
   }, []);
 
   const switchTurn = useCallback(() => {
@@ -328,12 +332,9 @@ const useGameLogic = () => {
     setWallPlacementError(null);
     const newWall: Wall = { ...realWall, playerId: currentPlayerId };
     
-    if (players[currentPlayerId].wallsLeft <= 0) {
-        setWallPlacementError("You have no walls left.");
-        return;
-    }
-    if (!isValidWallPlacement(newWall, walls, players[1], players[2])) {
-        setWallPlacementError("Invalid Placement. Walls cannot cross or completely block a player.");
+    const validationResult = isValidWallPlacement(newWall, walls, players[1], players[2]);
+    if (validationResult !== true) {
+        setWallPlacementError(validationResult);
         return;
     }
 
@@ -463,7 +464,7 @@ const useGameLogic = () => {
     try {
         let aiAction: AiAction;
         if (aiType === AiType.LOCAL) {
-            const checkWall = (wall: Wall) => isValidWallPlacement(wall, walls, players[1], players[2]);
+            const checkWall = (wall: Wall) => isValidWallPlacement(wall, walls, players[1], players[2]) === true;
             aiAction = getLocalAiMove(players[2], players[1], walls, difficulty, checkWall);
         } else {
             aiAction = await getAiMove(players, 2, walls, difficulty);
@@ -482,7 +483,7 @@ const useGameLogic = () => {
         } else if (aiAction.action === 'PLACE_WALL') {
             if (!aiAction.position || !aiAction.orientation) throw new Error("AI action 'PLACE_WALL' is missing properties.");
             const wallToPlace = { r: aiAction.position.r, c: aiAction.position.c, orientation: aiAction.orientation };
-            if (isValidWallPlacement({ ...wallToPlace, playerId: 2 }, walls, players[1], players[2])) handlePlaceWall(wallToPlace);
+            if (isValidWallPlacement({ ...wallToPlace, playerId: 2 }, walls, players[1], players[2]) === true) handlePlaceWall(wallToPlace);
             else throw new Error("AI suggested an invalid wall placement.");
         } else {
             throw new Error(`AI returned an invalid action type.`);

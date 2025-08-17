@@ -25,6 +25,10 @@ const content = {
     wallsRule: "The Golden Rule: You cannot place a wall that completely blocks the last remaining path for *either* player to their goal line.",
     captionValidWall: "A valid vertical wall placement.",
     captionInvalidWall: "An invalid placement that traps a player.",
+    wallsRulesTitle: "Wall Rules",
+    wallsRulesText: "Walls cannot be placed to cross over existing walls. They must be placed in empty grooves. However, they can be placed adjacent to other walls to form longer barriers.",
+    captionValidT: "Valid: Walls can form 'T' junctions.",
+    captionInvalidCross: "Invalid: Walls cannot form a '+' cross.",
     toggleButton: "हिंदी"
   },
   hi: {
@@ -46,6 +50,10 @@ const content = {
     wallsRule: "सुनहरा नियम: आप ऐसी दीवार नहीं लगा सकते जो किसी भी खिलाड़ी के लिए उनके लक्ष्य रेखा तक पहुंचने के अंतिम शेष पथ को पूरी तरह से अवरुद्ध कर दे।",
     captionValidWall: "एक वैध ऊर्ध्वाधर दीवार प्लेसमेंट।",
     captionInvalidWall: "एक अमान्य प्लेसमेंट जो एक खिलाड़ी को फंसाता है।",
+    wallsRulesTitle: "दीवार के नियम",
+    wallsRulesText: "मौजूदा दीवारों को पार करने के लिए दीवारें नहीं लगाई जा सकतीं। उन्हें खाली खांचों में रखा जाना चाहिए। हालांकि, लंबी बाधाएं बनाने के लिए उन्हें अन्य दीवारों के निकट रखा जा सकता है।",
+    captionValidT: "वैध: दीवारें 'T' जंक्शन बना सकती हैं।",
+    captionInvalidCross: "अमान्य: दीवारें '+' क्रॉस नहीं बना सकती हैं।",
     toggleButton: "English"
   }
 };
@@ -167,6 +175,28 @@ const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
                 </RuleIllustration>
             </div>
         </RuleSection>
+        
+        <RuleSection title={currentContent.wallsRulesTitle}>
+            <p>{currentContent.wallsRulesText}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <RuleIllustration caption={currentContent.captionValidT}>
+                    <svg width="80" height="80" viewBox="0 0 100 100">
+                        <path d="M 0 50 H 100 M 50 0 V 100" stroke="#d1d5db" strokeWidth="1"/>
+                        <rect x="50" y="45" width="50" height="10" fill="#3b82f6" rx="3" />
+                        <rect x="45" y="-33" width="10" height="66" fill="#3b82f6" rx="3" />
+                    </svg>
+                </RuleIllustration>
+                <RuleIllustration caption={currentContent.captionInvalidCross}>
+                    <svg width="80" height="80" viewBox="0 0 100 100">
+                        <path d="M 0 50 H 100 M 50 0 V 100" stroke="#d1d5db" strokeWidth="1"/>
+                        <rect x="-33" y="45" width="66" height="10" fill="#374151" rx="3" />
+                        <rect x="45" y="-33" width="10" height="66" fill="#ef4444" rx="3" />
+                        <path d="M 70 30 L 95 5 M 95 30 L 70 5" stroke="#ef4444" strokeWidth="6" strokeLinecap="round"/>
+                    </svg>
+                </RuleIllustration>
+            </div>
+        </RuleSection>
+
       </div>
     </Modal>
   );

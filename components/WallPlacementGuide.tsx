@@ -13,12 +13,12 @@ type WallPlacementGuideProps = {
 };
 
 // Checks for direct overlaps or intersections with existing walls.
+// This logic must be kept in sync with the physical validation in useGameLogic.
 const isPlacementInvalid = (wall: Omit<Wall, 'playerId'>, existingWalls: Wall[]): boolean => {
   return existingWalls.some(w => {
     // Exact same wall
     if (w.r === wall.r && w.c === wall.c && w.orientation === wall.orientation) return true;
     
-    // Wall collision logic
     if (wall.orientation === 'horizontal') {
         // Overlapping horizontal wall
         if (w.orientation === 'horizontal' && w.r === wall.r && Math.abs(w.c - wall.c) < 2) return true;
