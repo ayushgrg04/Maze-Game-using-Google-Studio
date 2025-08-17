@@ -1,6 +1,4 @@
-
-
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { BOARD_SIZE } from '../constants';
 import getAiMove from '../services/geminiService';
 import getLocalAiMove from '../services/localAiService';
@@ -40,6 +38,12 @@ const useGameLogic = () => {
   const [initialWalls, setInitialWalls] = useState(10);
   const [pendingGameStartArgs, setPendingGameStartArgs] = useState<any>(null);
   const [pendingJoinId, setPendingJoinId] = useState<string | null>(null);
+  const [lastStateTimestamp, setLastStateTimestamp] = useState(0);
+  const lastStateTimestampRef = useRef(lastStateTimestamp);
+
+  useEffect(() => {
+    lastStateTimestampRef.current = lastStateTimestamp;
+  }, [lastStateTimestamp]);
 
 
   const resetGameState = useCallback((isForfeit: boolean = false) => {
@@ -64,6 +68,7 @@ const useGameLogic = () => {
     setOnlinePlayerId(null);
     setPendingGameStartArgs(null);
     setPendingJoinId(null);
+    setLastStateTimestamp(0);
 
   }, [configuredTurnTime, onlineGameId, onlineRequestTimeout]);
   
@@ -95,6 +100,7 @@ const useGameLogic = () => {
         newState.currentPlayerId = actionByPlayerId === 1 ? 2 : 1;
     }
     newState.turnTime = configuredTurnTime;
+    newState.timestamp = Date.now();
     return newState;
   }, [configuredTurnTime]);
 
@@ -114,7 +120,7 @@ const useGameLogic = () => {
     }
     if (gameState === GameState.PLAYING && gameMode === GameMode.PVO && onlineGameId && onlinePlayerId && !winner) {
         // Handle Forfeit
-        const currentState: OnlineGameData = { players, walls, currentPlayerId, winner, gameTime, turnTime };
+        const currentState: OnlineGameData = { players, walls, currentPlayerId, winner, gameTime, turnTime, timestamp: lastStateTimestamp };
         const forfeitState = applyActionToState(currentState, { type: 'FORFEIT' }, onlinePlayerId);
         // Publish the final "forfeit" state and then clear the game from the server
         onlineService.leaveGame(onlineGameId, forfeitState);
@@ -125,7 +131,7 @@ const useGameLogic = () => {
         setGameState(GameState.MENU);
         resetGameState(false);
     }
-  }, [resetGameState, gameState, gameMode, onlineGameId, onlinePlayerId, winner, players, walls, currentPlayerId, gameTime, turnTime, applyActionToState, cancelAuth]);
+  }, [resetGameState, gameState, gameMode, onlineGameId, onlinePlayerId, winner, players, walls, currentPlayerId, gameTime, turnTime, applyActionToState, cancelAuth, lastStateTimestamp]);
 
   const initializeLocalGame = useCallback((mode: GameMode, p1Name: string = 'Player 1', selectedAiType: AiType, selectedDifficulty: Difficulty, duration: number, startPos: StartPosition, wallsCount: number) => {
     resetGameState();
@@ -245,12 +251,19 @@ const useGameLogic = () => {
   const untransformWall = transformWall; // This is also its own inverse
 
   const updateStateFromOnline = useCallback((data: OnlineGameData) => {
+      // Guard against stale updates. This is crucial for preventing timers
+      // from being reset by old data, especially from polling.
+      if (data.timestamp <= lastStateTimestampRef.current) {
+        return;
+      }
+
       setPlayers(data.players);
       setWalls(data.walls);
       setCurrentPlayerId(data.currentPlayerId);
       setWinner(data.winner);
       setGameTime(data.gameTime);
       setTurnTime(data.turnTime);
+      setLastStateTimestamp(data.timestamp);
       
       const gameHasStarted = data.players && data.players[1] && data.players[2];
       
@@ -287,7 +300,7 @@ const useGameLogic = () => {
 
     if (moveIsValid) {
         if (gameMode === GameMode.PVO && onlineGameId && onlinePlayerId) {
-            const currentState: OnlineGameData = { players, walls, currentPlayerId, winner, gameTime, turnTime };
+            const currentState: OnlineGameData = { players, walls, currentPlayerId, winner, gameTime, turnTime, timestamp: lastStateTimestamp };
             const nextState = applyActionToState(currentState, { type: 'MOVE', to: realTo }, onlinePlayerId);
             updateStateFromOnline(nextState); // Optimistic local update
             onlineService.publishGameState(onlineGameId, nextState);
@@ -305,7 +318,7 @@ const useGameLogic = () => {
     }
     setSelectedPiece(null);
     setValidMoves([]);
-  }, [players, walls, selectedPiece, currentPlayerId, switchTurn, gameMode, onlineGameId, onlinePlayerId, winner, gameTime, turnTime, applyActionToState, untransformPosition, updateStateFromOnline]);
+  }, [players, walls, selectedPiece, currentPlayerId, switchTurn, gameMode, onlineGameId, onlinePlayerId, winner, gameTime, turnTime, applyActionToState, untransformPosition, updateStateFromOnline, lastStateTimestamp]);
 
   const handlePlaceWall = useCallback((wall: Omit<Wall, 'playerId'>) => {
     // Untransform wall from display-space to true-space
@@ -325,7 +338,7 @@ const useGameLogic = () => {
     }
 
     if(gameMode === GameMode.PVO && onlineGameId && onlinePlayerId) {
-        const currentState: OnlineGameData = { players, walls, currentPlayerId, winner, gameTime, turnTime };
+        const currentState: OnlineGameData = { players, walls, currentPlayerId, winner, gameTime, turnTime, timestamp: lastStateTimestamp };
         const nextState = applyActionToState(currentState, { type: 'PLACE_WALL', wall: realWall }, onlinePlayerId);
         updateStateFromOnline(nextState); // Optimistic local update
         onlineService.publishGameState(onlineGameId, nextState);
@@ -338,7 +351,7 @@ const useGameLogic = () => {
       switchTurn();
     }
     setIsPlacingWall(false);
-  }, [players, walls, currentPlayerId, isValidWallPlacement, switchTurn, gameMode, onlineGameId, onlinePlayerId, winner, gameTime, turnTime, applyActionToState, untransformWall, updateStateFromOnline]);
+  }, [players, walls, currentPlayerId, isValidWallPlacement, switchTurn, gameMode, onlineGameId, onlinePlayerId, winner, gameTime, turnTime, applyActionToState, untransformWall, updateStateFromOnline, lastStateTimestamp]);
 
   useEffect(() => {
       if (onlineGameId) {
@@ -546,7 +559,7 @@ const useGameLogic = () => {
         if (onlineGameId && onlinePlayerId) {
             // Whoever's turn it is when the timer hits zero, that player loses.
             const losingPlayerId = currentPlayerId;
-            const currentState: OnlineGameData = { players, walls, currentPlayerId, winner, gameTime, turnTime: 0 };
+            const currentState: OnlineGameData = { players, walls, currentPlayerId, winner, gameTime, turnTime: 0, timestamp: lastStateTimestamp };
             const nextState = applyActionToState(currentState, { type: 'TIMEOUT' }, losingPlayerId);
             
             // We update locally and publish the result regardless of whose turn it was.
@@ -558,7 +571,7 @@ const useGameLogic = () => {
         setWinner(players[currentPlayerId === 1 ? 2 : 1]);
         setGameState(GameState.GAME_OVER);
     }
-  }, [turnTime, gameState, players, currentPlayerId, gameMode, onlinePlayerId, onlineGameId, winner, gameTime, walls, applyActionToState, updateStateFromOnline]);
+  }, [turnTime, gameState, players, currentPlayerId, gameMode, onlinePlayerId, onlineGameId, winner, gameTime, walls, applyActionToState, updateStateFromOnline, lastStateTimestamp]);
   
   // Polling effect to ensure synchronization in online games
   useEffect(() => {
@@ -568,8 +581,9 @@ const useGameLogic = () => {
 
     const intervalId = setInterval(async () => {
         const fetchedState = await onlineService.fetchCurrentGameState(onlineGameId);
-        // Only update if the fetched state shows it's now our turn, or if someone has won.
-        if (fetchedState && (fetchedState.currentPlayerId === onlinePlayerId || fetchedState.winner)) {
+        // The guard inside updateStateFromOnline now handles whether to apply the update,
+        // preventing stale data from resetting timers.
+        if (fetchedState) {
             updateStateFromOnline(fetchedState);
         }
     }, 1000); // Poll every 1 second

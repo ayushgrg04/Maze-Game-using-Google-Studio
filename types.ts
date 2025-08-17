@@ -1,5 +1,6 @@
 
 
+
 export type Player = {
   id: 1 | 2;
   name: string;
@@ -66,6 +67,7 @@ export type OnlineGameData = {
     winner: Player | null;
     gameTime: number;
     turnTime: number;
+    timestamp: number;
     // status: 'waiting' | 'active' | 'finished';
 };
 

@@ -118,6 +118,7 @@ class OnlineGameService {
             winner: null,
             gameTime: 0,
             turnTime: duration,
+            timestamp: Date.now(),
         };
         await this.publishGameState(gameId, initialGameState);
         return gameId;
@@ -134,6 +135,7 @@ class OnlineGameService {
         const initialWalls = gameState.players[1].wallsLeft;
         const player2: Player = { id: 2, name: player2Name, color: '#ec4899', position: { r: 0, c: p2Col }, wallsLeft: initialWalls, goalRow: BOARD_SIZE - 1, };
         gameState.players[2] = player2;
+        gameState.timestamp = Date.now();
         
         await this.publishGameState(gameId, gameState);
         return gameState;
@@ -236,6 +238,7 @@ class OnlineGameService {
             winner: null,
             gameTime: 0,
             turnTime: matchData.duration,
+            timestamp: Date.now(),
         };
         // The player receiving MATCH_FOUND is the Joiner, who is always Player 2
         this.onMatchFoundCallback(matchData.gameId, 2, initialState);
@@ -271,7 +274,8 @@ class OnlineGameService {
             currentPlayerId: 1,
             winner: null,
             gameTime: 0,
-            turnTime: request.duration
+            turnTime: request.duration,
+            timestamp: Date.now(),
         };
         this.publishGameState(gameId, initialState);
         // We are Player 1, so we call our callback with playerId: 1
