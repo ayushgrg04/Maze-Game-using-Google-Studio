@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import useGameLogic from './hooks/useGameLogic';
 import GameBoard from './components/GameBoard';
 import PlayerInfo from './components/PlayerInfo';
@@ -91,6 +91,38 @@ const App: React.FC = () => {
     const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
     const [showComingSoon, setShowComingSoon] = useState(false);
     
+    const gameBoardSizerRef = useRef<HTMLDivElement>(null);
+    const [boardSize, setBoardSize] = useState(0);
+
+    useEffect(() => {
+        if (gameState !== GameState.PLAYING && gameState !== GameState.GAME_OVER) {
+            return;
+        }
+
+        const calculateBoardSize = () => {
+            if (gameBoardSizerRef.current) {
+                const container = gameBoardSizerRef.current;
+                const { width, height } = container.getBoundingClientRect();
+                const size = Math.min(width, height);
+                setBoardSize(size);
+            }
+        };
+        
+        calculateBoardSize();
+
+        const resizeObserver = new ResizeObserver(calculateBoardSize);
+        if (gameBoardSizerRef.current) {
+            resizeObserver.observe(gameBoardSizerRef.current);
+        }
+        
+        return () => {
+            if (gameBoardSizerRef.current) {
+                // eslint-disable-next-line react-hooks/exhaustive-deps
+                resizeObserver.unobserve(gameBoardSizerRef.current);
+            }
+        };
+    }, [gameState]);
+
     useEffect(() => {
         if (lastAiAction?.reasoning) {
             setAiMessage(lastAiAction.reasoning);
@@ -228,8 +260,8 @@ const App: React.FC = () => {
                     currentPlayer && <TurnIndicator player={currentPlayer} />
                   )}
                 </div>
-                <div className="w-full flex-1 flex items-center justify-center min-h-0">
-                    <div className="aspect-square max-w-full max-h-full">
+                <div ref={gameBoardSizerRef} className="w-full flex-1 flex items-center justify-center min-h-0">
+                    <div style={{ width: boardSize > 0 ? `${boardSize}px` : '100%', height: boardSize > 0 ? `${boardSize}px` : '100%' }}>
                         <GameBoard 
                             players={players} 
                             walls={walls}
