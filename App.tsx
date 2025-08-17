@@ -198,7 +198,7 @@ const App: React.FC = () => {
     const aiPlayerName = players[2]?.name || 'AI';
 
     return (
-        <main className={`h-screen max-h-[100dvh] w-full flex flex-col items-center p-2 sm:p-4 bg-gradient-to-b from-[var(--dark-bg-start)] to-[var(--dark-bg-end)]`}>
+        <main className={`h-screen max-h-[100dvh] w-full flex flex-col items-center p-2 sm:p-4 bg-gradient-to-b from-[var(--dark-bg-start)] to-[var(--dark-bg-end)] overflow-hidden`}>
             <header className="w-full max-w-2xl flex-shrink-0">
                  <div className="flex justify-between items-center w-full">
                     <div className="relative flex-1">

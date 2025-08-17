@@ -115,14 +115,12 @@ const GameBoard: React.FC<GameBoardProps> = ({
         alignSelf: 'start',
         height: `${WALL_THICKNESS}px`,
         transform: `translateY(-${WALL_THICKNESS / 2}px)`,
-        margin: `0 ${GRID_GAP / 2}px`,
     } : { // Vertical
         gridRow: `${wall.r + 1} / span 2`,
         gridColumn: wall.c + 1,
         justifySelf: 'start',
         width: `${WALL_THICKNESS}px`,
         transform: `translateX(-${WALL_THICKNESS / 2}px)`,
-        margin: `${GRID_GAP / 2}px 0`,
     };
 
     return (
@@ -166,7 +164,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
   };
 
   return (
-    <div className="aspect-square h-full max-w-full p-2 bg-black/20 rounded-2xl shadow-lg border border-purple-500/30">
+    <div className="aspect-square max-w-full max-h-full p-2 bg-black/20 rounded-2xl shadow-lg border border-purple-500/30">
       <div
         className="relative grid h-full w-full"
         style={{

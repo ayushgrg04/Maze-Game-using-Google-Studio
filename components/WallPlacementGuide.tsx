@@ -37,14 +37,12 @@ export const WallPlacementGuide: React.FC<WallPlacementGuideProps> = ({
             alignSelf: 'start',
             height: '8px',
             transform: 'translateY(-50%)',
-             margin: `0 2.5px`,
         } : {
             gridRow: `${wallPreview.r + 1} / span 2`,
             gridColumn: wallPreview.c + 1,
             justifySelf: 'start',
             width: '8px',
             transform: 'translateX(-50%)',
-            margin: `2.5px 0`,
         };
         
         return (
