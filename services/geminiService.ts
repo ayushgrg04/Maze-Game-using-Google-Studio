@@ -1,3 +1,4 @@
+
 import { authService } from './authService';
 import { Difficulty } from '../types';
 import type { Player, Wall, AiAction } from '../types';
@@ -57,7 +58,7 @@ const getAiMove = async (
     const humanPlayerId = aiPlayerId === 1 ? 2 : 1;
   
     const prompt = `
-    You are an expert player in a maze race game called Quoridor.
+    You are an expert player in a magical maze game called Maze Magic.
     The board is a 9x9 grid. The coordinates are 0-indexed, from (r:0, c:0) at the top-left to (r:8, c:8) at the bottom-right.
     
     Current Game State:

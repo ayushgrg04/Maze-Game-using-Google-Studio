@@ -1,7 +1,7 @@
 {
-  "short_name": "Maze Race",
-  "name": "Gemini Maze Race",
-  "description": "A strategic, turn-based, two-player maze game. Players race to reach the opposite side of the board, placing walls to block or outmaneuver their opponent. Features a human vs. human mode and a human vs. AI mode powered by Gemini.",
+  "short_name": "Maze Magic",
+  "name": "Maze Magic",
+  "description": "A strategic, turn-based, two-player maze game with a vibrant, magical theme. Players race to reach the opposite side of the board, placing glowing walls to block or outmaneuver their opponent. Features a human vs. human mode and a human vs. AI mode powered by Gemini.",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
@@ -16,6 +16,6 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#f1f5f9",
-  "background_color": "#f1f5f9"
+  "theme_color": "#1a0c3d",
+  "background_color": "#0d061f"
 }

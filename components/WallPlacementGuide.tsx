@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import { BOARD_SIZE } from '../constants';
 import type { Position, Wall } from '../types';
@@ -12,22 +10,15 @@ type WallPlacementGuideProps = {
   onCancel: () => void;
 };
 
-// Checks for direct overlaps or intersections with existing walls.
-// This logic must be kept in sync with the physical validation in useGameLogic.
 const isPlacementInvalid = (wall: Omit<Wall, 'playerId'>, existingWalls: Wall[]): boolean => {
   return existingWalls.some(w => {
-    // Exact same wall
     if (w.r === wall.r && w.c === wall.c && w.orientation === wall.orientation) return true;
     
     if (wall.orientation === 'horizontal') {
-        // Overlapping horizontal wall
         if (w.orientation === 'horizontal' && w.r === wall.r && Math.abs(w.c - wall.c) < 2) return true;
-        // Crossing vertical wall
         if (w.orientation === 'vertical' && w.r === wall.r - 1 && w.c === wall.c + 1) return true;
     } else { // vertical
-        // Overlapping vertical wall
         if (w.orientation === 'vertical' && w.c === wall.c && Math.abs(w.r - wall.r) < 2) return true;
-        // Crossing horizontal wall
         if (w.orientation === 'horizontal' && w.r === wall.r + 1 && w.c === wall.c - 1) return true;
     }
     return false;
@@ -44,14 +35,16 @@ export const WallPlacementGuide: React.FC<WallPlacementGuideProps> = ({
             gridRow: wallPreview.r + 1,
             gridColumn: `${wallPreview.c + 1} / span 2`,
             alignSelf: 'start',
-            height: '10px',
+            height: '8px',
             transform: 'translateY(-50%)',
+             margin: `0 2.5px`,
         } : {
             gridRow: `${wallPreview.r + 1} / span 2`,
             gridColumn: wallPreview.c + 1,
             justifySelf: 'start',
-            width: '10px',
+            width: '8px',
             transform: 'translateX(-50%)',
+            margin: `2.5px 0`,
         };
         
         return (
@@ -80,6 +73,9 @@ export const WallPlacementGuide: React.FC<WallPlacementGuideProps> = ({
     }
 
     const guides = [];
+    const WALL_GUIDE_THICKNESS = 8;
+    const GUIDE_CONTAINER_SIZE = 20;
+
 
     // Horizontal Guides
     for (let r = 1; r < BOARD_SIZE; r++) {
@@ -94,16 +90,15 @@ export const WallPlacementGuide: React.FC<WallPlacementGuideProps> = ({
                     style={{ 
                         gridRow: r + 1, 
                         gridColumn: `${c + 1} / span 2`, 
-                        transform: 'translateY(calc(-50% - 2.5px))',
-                        height: '20px',
+                        transform: `translateY(-50%)`,
+                        height: `${GUIDE_CONTAINER_SIZE}px`,
                         pointerEvents: 'auto',
                         cursor: 'pointer',
                     }}
                     onClick={() => onWallClick(wall)}
                     aria-label={`Place horizontal wall at row ${r}, column ${c}`}
                 >
-                    <div className="h-[10px] w-full bg-slate-400 rounded-full opacity-40 transition-opacity duration-200 group-hover:opacity-0" />
-                    <div className="absolute h-[10px] w-full opacity-0 group-hover:opacity-80 transition-all duration-200 ease-in-out rounded-full group-hover:scale-y-125" style={{ backgroundColor: playerColor, boxShadow: `0 0 12px ${playerColor}` }} />
+                    <div className="absolute h-[8px] w-full opacity-0 group-hover:opacity-100 transition-all duration-200 ease-in-out rounded-full group-hover:scale-y-125" style={{ backgroundColor: playerColor, boxShadow: `0 0 12px ${playerColor}` }} />
                 </div>
             );
         }
@@ -122,16 +117,15 @@ export const WallPlacementGuide: React.FC<WallPlacementGuideProps> = ({
                     style={{ 
                         gridRow: `${r + 1} / span 2`, 
                         gridColumn: c + 1,
-                        transform: 'translateX(calc(-50% - 2.5px))',
-                        width: '20px',
+                        transform: 'translateX(-50%)',
+                        width: `${GUIDE_CONTAINER_SIZE}px`,
                         pointerEvents: 'auto',
                         cursor: 'pointer',
                     }}
                     onClick={() => onWallClick(wall)}
                     aria-label={`Place vertical wall at row ${r}, column ${c}`}
                 >
-                    <div className="w-[10px] h-full bg-slate-400 rounded-full opacity-40 transition-opacity duration-200 group-hover:opacity-0" />
-                    <div className="absolute w-[10px] h-full opacity-0 group-hover:opacity-80 transition-all duration-200 ease-in-out rounded-full group-hover:scale-x-125" style={{ backgroundColor: playerColor, boxShadow: `0 0 12px ${playerColor}` }} />
+                    <div className="absolute w-[8px] h-full opacity-0 group-hover:opacity-100 transition-all duration-200 ease-in-out rounded-full group-hover:scale-x-125" style={{ backgroundColor: playerColor, boxShadow: `0 0 12px ${playerColor}` }} />
                 </div>
             );
         }

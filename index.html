@@ -4,17 +4,98 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gemini Maze Race</title>
+    <title>Maze Magic</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Luckiest+Guy&display=swap" rel="stylesheet">
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#f1f5f9">
+    <meta name="theme-color" content="#1a0c3d">
     <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
     <style>
+      :root {
+        --glow-purple: #a855f7;
+        --glow-pink: #ec4899;
+        --glow-blue: #3b82f6;
+        --glow-gold: #f59e0b;
+        --glow-green: #22c55e;
+        --dark-bg-start: #1a0c3d;
+        --dark-bg-end: #0d061f;
+      }
       body {
         font-family: 'Inter', sans-serif;
+        background-color: var(--dark-bg-end);
+        color: #e5e7eb;
+        overflow: hidden;
+      }
+      .font-magic {
+        font-family: 'Luckiest Guy', cursive;
+      }
+      .text-glow-purple {
+        text-shadow: 0 0 8px var(--glow-purple), 0 0 16px var(--glow-purple);
+      }
+      .button-glow {
+        transition: all 0.3s ease;
+      }
+      .button-glow:hover {
+        transform: translateY(-2px);
+      }
+      .button-glow-gold {
+        box-shadow: 0 0 5px var(--glow-gold), 0 0 10px var(--glow-gold), inset 0 0 5px rgba(255, 255, 255, 0.3);
+      }
+      .button-glow-gold:hover {
+        box-shadow: 0 0 8px var(--glow-gold), 0 0 16px var(--glow-gold), 0 0 24px var(--glow-gold), inset 0 0 5px rgba(255, 255, 255, 0.3);
+      }
+      .button-glow-pink {
+        box-shadow: 0 0 5px var(--glow-pink), 0 0 10px var(--glow-pink), inset 0 0 5px rgba(255, 255, 255, 0.3);
+      }
+      .button-glow-pink:hover {
+        box-shadow: 0 0 8px var(--glow-pink), 0 0 16px var(--glow-pink), 0 0 24px var(--glow-pink), inset 0 0 5px rgba(255, 255, 255, 0.3);
+      }
+       .button-glow-blue {
+        box-shadow: 0 0 5px var(--glow-blue), 0 0 10px var(--glow-blue), inset 0 0 5px rgba(255, 255, 255, 0.3);
+      }
+      .button-glow-blue:hover {
+        box-shadow: 0 0 8px var(--glow-blue), 0 0 16px var(--glow-blue), 0 0 24px var(--glow-blue), inset 0 0 5px rgba(255, 255, 255, 0.3);
+      }
+      .button-glow-green {
+        box-shadow: 0 0 5px var(--glow-green), 0 0 10px var(--glow-green), inset 0 0 5px rgba(255, 255, 255, 0.3);
+      }
+      .button-glow-green:hover {
+        box-shadow: 0 0 8px var(--glow-green), 0 0 16px var(--glow-green), 0 0 24px var(--glow-green), inset 0 0 5px rgba(255, 255, 255, 0.3);
+      }
+       .button-glow-purple {
+        box-shadow: 0 0 5px var(--glow-purple), 0 0 10px var(--glow-purple), inset 0 0 5px rgba(255, 255, 255, 0.3);
+      }
+      .button-glow-purple:hover {
+        box-shadow: 0 0 8px var(--glow-purple), 0 0 16px var(--glow-purple), 0 0 24px var(--glow-purple), inset 0 0 5px rgba(255, 255, 255, 0.3);
+      }
+       .button-glow-red {
+        box-shadow: 0 0 5px #ef4444, 0 0 10px #ef4444, inset 0 0 5px rgba(255, 255, 255, 0.3);
+      }
+      .button-glow-red:hover {
+        box-shadow: 0 0 8px #ef4444, 0 0 16px #ef4444, 0 0 24px #ef4444, inset 0 0 5px rgba(255, 255, 255, 0.3);
+      }
+      
+      .magical-container {
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(168, 85, 247, 0.5);
+        box-shadow: 0 0 15px rgba(168, 85, 247, 0.3);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+      }
+      .pulse {
+         animation: pulse 2s infinite;
+      }
+      @keyframes pulse {
+        0%, 100% {
+          transform: scale(1);
+          filter: brightness(1);
+        }
+        50% {
+          transform: scale(1.05);
+          filter: brightness(1.2);
+        }
       }
     </style>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -30,8 +111,39 @@
 }
 </script>
 </head>
-  <body class="bg-gray-100 text-gray-800">
-    <div id="root"></div>
+  <body class="bg-magical-night">
+    <div id="stars-container" class="absolute inset-0 pointer-events-none"></div>
+    <div id="root" class="relative z-10"></div>
     <script type="module" src="/index.tsx"></script>
+    <script>
+      // Starry background script
+      const container = document.getElementById('stars-container');
+      const numStars = 200;
+      for (let i = 0; i < numStars; i++) {
+        const star = document.createElement('div');
+        star.style.position = 'absolute';
+        star.style.backgroundColor = 'white';
+        star.style.borderRadius = '50%';
+        const size = Math.random() * 2 + 1;
+        star.style.width = size + 'px';
+        star.style.height = size + 'px';
+        star.style.left = Math.random() * 100 + 'vw';
+        star.style.top = Math.random() * 100 + 'vh';
+        star.style.opacity = Math.random() * 0.5 + 0.5;
+        const duration = Math.random() * 5 + 3;
+        star.style.animation = `twinkle ${duration}s infinite alternate`;
+        container.appendChild(star);
+      }
+
+      const styleSheet = document.createElement("style");
+      styleSheet.type = "text/css";
+      styleSheet.innerText = `
+        @keyframes twinkle {
+          0% { opacity: ${Math.random() * 0.5}; }
+          100% { opacity: ${Math.random() * 0.5 + 0.5}; }
+        }
+      `;
+      document.head.appendChild(styleSheet);
+    </script>
   </body>
 </html>

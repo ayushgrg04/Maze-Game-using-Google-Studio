@@ -10,16 +10,16 @@ const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({ onSignIn, onCance
   return (
     <Modal title="Authentication Required" onClose={onCancel}>
       <div className="text-center space-y-6">
-        <p className="text-gray-600 text-lg">
+        <p className="text-gray-300 text-lg">
           To play against the Gemini AI, you need to sign in with your Google account.
         </p>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-400">
           This allows the application to make requests to the Gemini API on your behalf.
         </p>
         <div className="flex flex-col gap-4">
           <button 
             onClick={onSignIn} 
-            className="w-full bg-blue-500 text-white font-bold py-3 rounded-lg hover:bg-blue-600 transition-all flex items-center justify-center gap-3"
+            className="w-full bg-blue-500 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-3 button-glow button-glow-blue"
           >
             <svg className="w-6 h-6" viewBox="0 0 48 48">
               <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039L38.804 8.841C34.522 4.952 29.548 2.5 24 2.5C11.458 2.5 1.5 12.458 1.5 25s9.958 22.5 22.5 22.5s22.5-9.958 22.5-22.5c0-1.55-.14-3.05-.411-4.417z"></path>
@@ -31,7 +31,7 @@ const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({ onSignIn, onCance
           </button>
           <button 
             onClick={onCancel} 
-            className="w-full bg-gray-600 text-white font-bold py-3 rounded-lg hover:bg-gray-500 transition-all"
+            className="w-full bg-purple-600 text-white font-bold py-3 rounded-lg button-glow button-glow-purple"
           >
             Cancel
           </button>
