@@ -64,7 +64,7 @@ const BackButton: React.FC<{ onClick: () => void; className?: string }> = ({ onC
     className={`absolute top-4 left-4 p-2 rounded-full bg-black/30 hover:bg-black/50 text-gray-300 hover:text-white transition-all button-glow z-10 ${className}`}
     aria-label="Go back"
   >
-    <svg xmlns="http://www.w.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
     </svg>
   </button>
@@ -89,6 +89,7 @@ const App: React.FC = () => {
     const [errorToast, setErrorToast] = useState<string | null>(null);
     const [showHelp, setShowHelp] = useState(false);
     const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
+    const [showComingSoon, setShowComingSoon] = useState(false);
     
     useEffect(() => {
         if (lastAiAction?.reasoning) {
@@ -119,6 +120,7 @@ const App: React.FC = () => {
                       playerName={playerName}
                       onStartGame={(mode, diff, p1Name, type, duration, startPos, walls) => startGame(mode, diff, p1Name, type, duration, startPos, walls)}
                       onBack={() => setMenuScreen('main')}
+                      setShowComingSoon={setShowComingSoon}
                     />
                 );
             case 'online_setup':
@@ -154,6 +156,15 @@ const App: React.FC = () => {
                 <AnimatedMenuBackground />
 
                 {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
+                
+                {showComingSoon && (
+                     <Modal title="Coming Soon!" onClose={() => setShowComingSoon(false)}>
+                        <div className="text-center space-y-4">
+                            <p className="text-gray-300 text-lg">The powerful Gemini AI opponent is under development and will be available in a future update. Stay tuned!</p>
+                            <button onClick={() => setShowComingSoon(false)} className="w-full bg-cyan-500 text-white font-bold py-3 rounded-lg button-glow button-glow-cyan">OK</button>
+                        </div>
+                    </Modal>
+                )}
 
                 <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4">
                     <div className="w-full max-w-md magical-container p-6 md:p-8 rounded-2xl relative">
@@ -264,6 +275,18 @@ const App: React.FC = () => {
                 {winner.id === (onlinePlayerId ?? 1) && <Celebration />}
                 <Modal title="Game Over!">
                     <div className="text-center">
+                        <div className="flex justify-center mb-6">
+                            <div className={`w-24 h-24 rounded-full flex items-center justify-center text-white font-bold text-5xl border-4 border-white/50`}
+                                style={{
+                                    backgroundColor: winner.color,
+                                    boxShadow: `0 0 20px ${winner.color}, 0 0 40px ${winner.color}, inset 0 0 10px rgba(255,255,255,0.8)`
+                                }}
+                            >
+                                <span className="font-magic" style={{ textShadow: '3px 3px 5px rgba(0,0,0,0.5)' }}>
+                                    {winner.id}
+                                </span>
+                            </div>
+                        </div>
                         <h3 className={`text-4xl font-magic mb-2`} style={{color: winner.color, textShadow: `0 0 10px ${winner.color}`}}>{winner.name} wins!</h3>
                         {gameMode === GameMode.PVC && winner.id === 1 && (
                             <p className="text-gray-300 mb-4 text-lg">
@@ -326,6 +349,13 @@ const App: React.FC = () => {
                     animation-iteration-count: 1;
                     animation-fill-mode: forwards;
                 }
+                @keyframes swirl {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                .animate-swirl {
+                    animation: swirl 2s linear infinite;
+                }
             `}</style>
         </main>
     );
@@ -361,7 +391,7 @@ const MainMenu: React.FC<{ onNavigate: (screen: 'local_setup' | 'online_setup') 
                 <button onClick={() => onNavigate('local_setup')} className="p-4 rounded-lg font-bold transition-all bg-cyan-500 text-white shadow-lg button-glow button-glow-cyan">Local Game</button>
                 <button onClick={() => onNavigate('online_setup')} className="p-4 rounded-lg font-bold transition-all bg-pink-500 text-white shadow-lg button-glow button-glow-pink">Online Game</button>
             </div>
-            <p className="text-xs text-gray-500 text-center pt-2">Version 2.0</p>
+            <p className="text-xs text-gray-500 text-center pt-2">Version 3.0</p>
         </div>
     );
 };
@@ -398,7 +428,18 @@ const WaitingForOpponentModal: React.FC<{
     return (
         <Modal title={title}>
             <div className="text-center space-y-4">
-                <svg className="animate-spin h-10 w-10 text-purple-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                 <div className="w-24 h-24 mx-auto">
+                    <svg viewBox="0 0 100 100" className="animate-swirl">
+                        <defs>
+                            <linearGradient id="swirl-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor="var(--glow-cyan)" />
+                                <stop offset="100%" stopColor="var(--glow-purple)" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M 50,50 m -40,0 a 40,40 0 1,0 80,0 a 40,40 0 1,0 -80,0" fill="none" stroke="url(#swirl-gradient)" strokeWidth="6" strokeLinecap="round" strokeDasharray="150 251.2" />
+                        <path d="M 50,50 m -25,0 a 25,25 0 1,0 50,0 a 25,25 0 1,0 -50,0" fill="none" stroke="url(#swirl-gradient)" strokeWidth="4" strokeLinecap="round" strokeDasharray="80 157" strokeDashoffset="50" />
+                    </svg>
+                </div>
                 
                 {isFindingMatch ? (
                     <p className="text-gray-300">Searching for another player. This may take a moment.</p>
@@ -441,16 +482,15 @@ const SetupButton: React.FC<{active: boolean, onClick: ()=>void, children: React
     return <button onClick={onClick} className={`w-full p-3 rounded-lg font-bold transition-all button-glow ${activeClass}`}>{children}</button>
 };
 
-const LocalGameSetup: React.FC<{ playerName: string; onStartGame: Function; onBack: () => void; }> = (props) => {
+const LocalGameSetup: React.FC<{ playerName: string; onStartGame: Function; onBack: () => void; setShowComingSoon: (show: boolean) => void; }> = (props) => {
     const [mode, setMode] = useState<GameMode>(GameMode.PVC);
     const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.MEDIUM);
-    const [aiType, setAiType] = useState<AiType>(AiType.LOCAL);
     const [startPos, setStartPos] = useState<StartPosition>(StartPosition.CENTER);
     const [duration, setDuration] = useState(60);
     const [walls, setWalls] = useState(10);
-    const minTime = mode === GameMode.PVC && aiType === AiType.GEMINI ? 60 : 30;
+    const minTime = 30;
 
-    useEffect(() => { if (duration < minTime) setDuration(minTime); }, [mode, aiType, duration, minTime]);
+    useEffect(() => { if (duration < minTime) setDuration(minTime); }, [duration, minTime]);
 
     return (
       <div className="space-y-4 animate-fade-in-down">
@@ -465,8 +505,8 @@ const LocalGameSetup: React.FC<{ playerName: string; onStartGame: Function; onBa
                   <div>
                       <h3 className="font-semibold text-gray-300 mb-2">AI Type</h3>
                       <div className="flex gap-4">
-                          <SetupButton active={aiType === AiType.LOCAL} onClick={() => setAiType(AiType.LOCAL)} color="dark">Local (Offline)</SetupButton>
-                          <SetupButton active={aiType === AiType.GEMINI} onClick={() => setAiType(AiType.GEMINI)} color="fuchsia">Gemini AI</SetupButton>
+                          <SetupButton active={true} onClick={() => {}} color="dark">Local (Offline)</SetupButton>
+                          <SetupButton active={false} onClick={() => props.setShowComingSoon(true)} color="fuchsia">Gemini AI</SetupButton>
                       </div>
                   </div>
                   <div>
@@ -493,7 +533,7 @@ const LocalGameSetup: React.FC<{ playerName: string; onStartGame: Function; onBa
               <input type="number" id="turnTime" value={duration} min={minTime} step="15" onChange={(e) => setDuration(Math.max(minTime, Number(e.target.value)))} className="w-full p-3 rounded-lg bg-black/30 border border-fuchsia-500/50" />
               <p className="text-xs text-gray-400 mt-1">Minimum: {minTime} seconds.</p>
           </div>
-          <button onClick={() => props.onStartGame(mode, difficulty, props.playerName, aiType, duration, startPos, walls)} className="w-full bg-green-500 text-white font-bold py-4 rounded-lg button-glow button-glow-green text-xl">Start Game</button>
+          <button onClick={() => props.onStartGame(mode, difficulty, props.playerName, AiType.LOCAL, duration, startPos, walls)} className="w-full bg-green-500 text-white font-bold py-4 rounded-lg button-glow button-glow-green text-xl">Start Game</button>
       </div>
     );
 }
