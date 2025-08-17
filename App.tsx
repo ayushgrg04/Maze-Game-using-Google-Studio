@@ -159,7 +159,7 @@ const App: React.FC = () => {
                     <div className="w-full max-w-md magical-container p-6 md:p-8 rounded-2xl relative">
                         {renderMenu()}
                         <div className="mt-6">
-                           <button onClick={() => setShowHelp(true)} className="w-full bg-purple-600 text-white font-bold py-3 rounded-lg button-glow button-glow-purple transition-all text-lg">How to Play</button>
+                           <button onClick={() => setShowHelp(true)} className="w-full bg-fuchsia-600 text-white font-bold py-3 rounded-lg button-glow button-glow-purple transition-all text-lg">How to Play</button>
                         </div>
                     </div>
                 </div>
@@ -246,15 +246,15 @@ const App: React.FC = () => {
 
                 {wallPreview ? (
                      <div className="flex w-full space-x-4 mt-4">
-                         <button onClick={cancelWallPlacement} className="w-full py-3 rounded-lg font-bold text-white bg-red-500 button-glow button-glow-red">Cancel</button>
+                         <button onClick={cancelWallPlacement} className="w-full py-3 rounded-lg font-bold text-white bg-orange-500 button-glow button-glow-orange">Cancel</button>
                          <button onClick={confirmWallPlacement} className="w-full py-3 rounded-lg font-bold text-white bg-green-500 button-glow button-glow-green">Confirm Wall</button>
                     </div>
                 ) : (
                     <div className="flex w-full space-x-4 mt-4">
-                         <button onClick={togglePlacingWall} disabled={!currentPlayer || currentPlayer.wallsLeft === 0 || !isMyTurn} className={`w-full py-3 rounded-lg font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed button-glow ${isPlacingWall ? 'bg-red-500 button-glow-red' : 'bg-blue-500 button-glow-blue'}`}>
+                         <button onClick={togglePlacingWall} disabled={!currentPlayer || currentPlayer.wallsLeft === 0 || !isMyTurn} className={`w-full py-3 rounded-lg font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed button-glow ${isPlacingWall ? 'bg-orange-500 button-glow-orange' : 'bg-cyan-500 button-glow-cyan'}`}>
                             {isPlacingWall ? 'Cancel' : 'Place Wall'}
                          </button>
-                         <button onClick={() => setShowNewGameConfirm(true)} className="w-full py-3 rounded-lg font-bold text-white bg-purple-600 button-glow button-glow-purple">New Game</button>
+                         <button onClick={() => setShowNewGameConfirm(true)} className="w-full py-3 rounded-lg font-bold text-white bg-fuchsia-600 button-glow button-glow-purple">New Game</button>
                     </div>
                 )}
             </footer>
@@ -273,7 +273,7 @@ const App: React.FC = () => {
                         { turnTime <= 0 && <p className="text-gray-400 mb-4">The other player ran out of time.</p>}
                         <div className="flex flex-col gap-4 mt-6">
                            { gameMode !== GameMode.PVO && <button onClick={() => startGame(gameMode, difficulty, players[1].name, aiType, configuredTurnTime, startPosition, initialWalls)} className="w-full bg-green-500 text-white font-bold py-3 rounded-lg button-glow button-glow-green">Play Again</button>}
-                            <button onClick={returnToMenu} className="w-full bg-purple-600 text-white font-bold py-3 rounded-lg button-glow button-glow-purple">Main Menu</button>
+                            <button onClick={returnToMenu} className="w-full bg-fuchsia-600 text-white font-bold py-3 rounded-lg button-glow button-glow-purple">Main Menu</button>
                         </div>
                     </div>
                 </Modal>
@@ -291,7 +291,7 @@ const App: React.FC = () => {
                  <Modal title="API Limit Reached" onClose={() => setShowRateLimitModal(false)}>
                     <div className="text-center space-y-4">
                         <p className="text-gray-300">You've exceeded the request limit for Gemini. The AI will make a simple move. For an uninterrupted experience, try the offline <span className="font-bold text-white">Local AI</span>.</p>
-                        <button onClick={() => setShowRateLimitModal(false)} className="w-full bg-blue-500 text-white font-bold py-3 rounded-lg button-glow button-glow-blue">OK</button>
+                        <button onClick={() => setShowRateLimitModal(false)} className="w-full bg-cyan-500 text-white font-bold py-3 rounded-lg button-glow button-glow-cyan">OK</button>
                     </div>
                 </Modal>
             )}
@@ -301,13 +301,13 @@ const App: React.FC = () => {
                         <p className="text-gray-300">Are you sure? Your current game progress will be lost.</p>
                         <div className="flex gap-4 mt-6">
                             <button onClick={() => setShowNewGameConfirm(false)} className="w-full py-3 rounded-lg font-bold text-white bg-gray-600 hover:bg-gray-700 transition-all">Cancel</button>
-                            <button onClick={() => { setShowNewGameConfirm(false); returnToMenu(); }} className="w-full py-3 rounded-lg font-bold text-white bg-red-500 button-glow button-glow-red">Confirm</button>
+                            <button onClick={() => { setShowNewGameConfirm(false); returnToMenu(); }} className="w-full py-3 rounded-lg font-bold text-white bg-orange-500 button-glow button-glow-orange">Confirm</button>
                         </div>
                     </div>
                 </Modal>
             )}
             {errorToast && (
-                <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-red-900/80 border border-red-500 text-red-200 px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50 animate-fade-in-down backdrop-blur-sm">
+                <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-orange-900/80 border border-orange-500 text-orange-200 px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50 animate-fade-in-down backdrop-blur-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     <span className="font-semibold">{errorToast}</span>
                 </div>
@@ -355,10 +355,10 @@ const MainMenu: React.FC<{ onNavigate: (screen: 'local_setup' | 'online_setup') 
             </div>
              <div>
                  <label htmlFor="playerName" className="text-lg font-semibold mb-2 text-gray-300 block">Your Name</label>
-                 <input type="text" id="playerName" value={playerName} onChange={handlePlayerNameChange} className="w-full p-3 rounded-lg bg-black/30 border-2 border-purple-500/50 focus:outline-none focus:ring-2 focus:ring-purple-400 transition" placeholder="Enter your name" />
+                 <input type="text" id="playerName" value={playerName} onChange={handlePlayerNameChange} className="w-full p-3 rounded-lg bg-black/30 border-2 border-fuchsia-500/50 focus:outline-none focus:ring-2 focus:ring-fuchsia-400 transition" placeholder="Enter your name" />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <button onClick={() => onNavigate('local_setup')} className="p-4 rounded-lg font-bold transition-all bg-blue-500 text-white shadow-lg button-glow button-glow-blue">Local Game</button>
+                <button onClick={() => onNavigate('local_setup')} className="p-4 rounded-lg font-bold transition-all bg-cyan-500 text-white shadow-lg button-glow button-glow-cyan">Local Game</button>
                 <button onClick={() => onNavigate('online_setup')} className="p-4 rounded-lg font-bold transition-all bg-pink-500 text-white shadow-lg button-glow button-glow-pink">Online Game</button>
             </div>
             <p className="text-xs text-gray-500 text-center pt-2">Version 2.0</p>
@@ -408,8 +408,8 @@ const WaitingForOpponentModal: React.FC<{
 
                 {gameId && (
                     <div className="flex items-center space-x-2">
-                        <input type="text" readOnly value={joinUrl} className="w-full p-2 rounded-lg bg-black/30 border border-purple-500/50 text-sm" />
-                        <button onClick={handleCopy} className="p-2 rounded-lg bg-blue-500 text-white font-bold button-glow button-glow-blue text-sm w-24">{copied ? 'Copied!' : 'Copy'}</button>
+                        <input type="text" readOnly value={joinUrl} className="w-full p-2 rounded-lg bg-black/30 border border-fuchsia-500/50 text-sm" />
+                        <button onClick={handleCopy} className="p-2 rounded-lg bg-cyan-500 text-white font-bold button-glow button-glow-cyan text-sm w-24">{copied ? 'Copied!' : 'Copy'}</button>
                     </div>
                 )}
                 {hasTimeout && timeLeft > 0 && (
@@ -420,7 +420,7 @@ const WaitingForOpponentModal: React.FC<{
                  {(isFindingMatch && onCancelSearch || gameId && onCancelCreateGame) && (
                     <button 
                         onClick={isFindingMatch ? onCancelSearch : onCancelCreateGame} 
-                        className="w-full mt-2 py-2 rounded-lg font-bold text-white bg-red-500 button-glow button-glow-red"
+                        className="w-full mt-2 py-2 rounded-lg font-bold text-white bg-orange-500 button-glow button-glow-orange"
                     >
                         {isFindingMatch ? 'Cancel Search' : 'Cancel Game'}
                     </button>
@@ -430,11 +430,11 @@ const WaitingForOpponentModal: React.FC<{
     )
 }
 
-const SetupButton: React.FC<{active: boolean, onClick: ()=>void, children: React.ReactNode, color: 'blue'|'pink'|'purple'|'dark'}> = ({active, onClick, children, color}) => {
+const SetupButton: React.FC<{active: boolean, onClick: ()=>void, children: React.ReactNode, color: 'cyan'|'pink'|'fuchsia'|'dark'}> = ({active, onClick, children, color}) => {
     const colorClasses = {
-        blue: 'bg-blue-500 button-glow-blue',
+        cyan: 'bg-cyan-500 button-glow-cyan',
         pink: 'bg-pink-500 button-glow-pink',
-        purple: 'bg-purple-500 button-glow-purple',
+        fuchsia: 'bg-fuchsia-500 button-glow-purple',
         dark: 'bg-gray-800 button-glow-purple'
     };
     const activeClass = active ? `${colorClasses[color]} text-white scale-105` : 'bg-black/30 hover:bg-black/50 text-gray-300';
@@ -457,7 +457,7 @@ const LocalGameSetup: React.FC<{ playerName: string; onStartGame: Function; onBa
           <BackButton onClick={props.onBack} />
           <h2 className="text-2xl font-bold text-center text-white pt-8">Local Game Setup</h2>
           <div className="flex gap-4">
-              <SetupButton active={mode === GameMode.PVP} onClick={() => setMode(GameMode.PVP)} color="blue">Player vs Player</SetupButton>
+              <SetupButton active={mode === GameMode.PVP} onClick={() => setMode(GameMode.PVP)} color="cyan">Player vs Player</SetupButton>
               <SetupButton active={mode === GameMode.PVC} onClick={() => setMode(GameMode.PVC)} color="pink">Player vs AI</SetupButton>
           </div>
           {mode === GameMode.PVC && (
@@ -466,13 +466,13 @@ const LocalGameSetup: React.FC<{ playerName: string; onStartGame: Function; onBa
                       <h3 className="font-semibold text-gray-300 mb-2">AI Type</h3>
                       <div className="flex gap-4">
                           <SetupButton active={aiType === AiType.LOCAL} onClick={() => setAiType(AiType.LOCAL)} color="dark">Local (Offline)</SetupButton>
-                          <SetupButton active={aiType === AiType.GEMINI} onClick={() => setAiType(AiType.GEMINI)} color="purple">Gemini AI</SetupButton>
+                          <SetupButton active={aiType === AiType.GEMINI} onClick={() => setAiType(AiType.GEMINI)} color="fuchsia">Gemini AI</SetupButton>
                       </div>
                   </div>
                   <div>
                       <h3 className="font-semibold text-gray-300 mb-2">AI Difficulty</h3>
                       <div className="grid grid-cols-3 gap-2">
-                          {Object.values(Difficulty).map(d => (<button key={d} onClick={() => setDifficulty(d)} className={`p-2 rounded-lg font-semibold transition-all text-sm ${difficulty === d ? 'bg-purple-500 button-glow-purple text-white' : 'bg-black/30 hover:bg-black/50 text-gray-300'}`}>{d}</button>))}
+                          {Object.values(Difficulty).map(d => (<button key={d} onClick={() => setDifficulty(d)} className={`p-2 rounded-lg font-semibold transition-all text-sm ${difficulty === d ? 'bg-fuchsia-500 button-glow-purple text-white' : 'bg-black/30 hover:bg-black/50 text-gray-300'}`}>{d}</button>))}
                       </div>
                   </div>
               </div>
@@ -480,17 +480,17 @@ const LocalGameSetup: React.FC<{ playerName: string; onStartGame: Function; onBa
           <div>
               <h3 className="font-semibold text-gray-300 mb-2">Starting Position</h3>
               <div className="flex gap-4">
-                  <SetupButton active={startPos === StartPosition.CENTER} onClick={() => setStartPos(StartPosition.CENTER)} color="blue">Center</SetupButton>
+                  <SetupButton active={startPos === StartPosition.CENTER} onClick={() => setStartPos(StartPosition.CENTER)} color="cyan">Center</SetupButton>
                   <SetupButton active={startPos === StartPosition.RANDOM} onClick={() => setStartPos(StartPosition.RANDOM)} color="pink">Random</SetupButton>
               </div>
           </div>
            <div>
-              <label htmlFor="walls" className="font-semibold text-gray-300 block mb-1">Number of Walls: <span className="font-bold text-blue-400">{walls}</span></label>
+              <label htmlFor="walls" className="font-semibold text-gray-300 block mb-1">Number of Walls: <span className="font-bold text-cyan-400">{walls}</span></label>
               <input type="range" id="walls" value={walls} min="5" max="15" step="1" onChange={(e) => setWalls(Number(e.target.value))} className="w-full" />
           </div>
           <div>
               <label htmlFor="turnTime" className="font-semibold text-gray-300 block mb-2">Time Per Move (seconds)</label>
-              <input type="number" id="turnTime" value={duration} min={minTime} step="15" onChange={(e) => setDuration(Math.max(minTime, Number(e.target.value)))} className="w-full p-3 rounded-lg bg-black/30 border border-purple-500/50" />
+              <input type="number" id="turnTime" value={duration} min={minTime} step="15" onChange={(e) => setDuration(Math.max(minTime, Number(e.target.value)))} className="w-full p-3 rounded-lg bg-black/30 border border-fuchsia-500/50" />
               <p className="text-xs text-gray-400 mt-1">Minimum: {minTime} seconds.</p>
           </div>
           <button onClick={() => props.onStartGame(mode, difficulty, props.playerName, aiType, duration, startPos, walls)} className="w-full bg-green-500 text-white font-bold py-4 rounded-lg button-glow button-glow-green text-xl">Start Game</button>
@@ -513,21 +513,21 @@ const OnlineGameSetup: React.FC<{ playerName: string; onCreateGame: Function; on
                   <label htmlFor="turnTimeOnline" className="text-gray-300 block">Time Per Move: {duration}s</label>
                   <input type="range" id="turnTimeOnline" value={duration} min="30" max="120" step="15" onChange={(e) => setDuration(Number(e.target.value))} className="w-full" />
                   
-                  <label htmlFor="wallsOnline" className="text-gray-300 block">Number of Walls: <span className="font-bold text-blue-400">{walls}</span></label>
+                  <label htmlFor="wallsOnline" className="text-gray-300 block">Number of Walls: <span className="font-bold text-cyan-400">{walls}</span></label>
                   <input type="range" id="wallsOnline" value={walls} min="5" max="15" step="1" onChange={(e) => setWalls(Number(e.target.value))} className="w-full" />
                   
                   <div className="flex gap-4 pt-2">
-                     <SetupButton active={startPos === StartPosition.CENTER} onClick={() => setStartPos(StartPosition.CENTER)} color="blue">Center Start</SetupButton>
+                     <SetupButton active={startPos === StartPosition.CENTER} onClick={() => setStartPos(StartPosition.CENTER)} color="cyan">Center Start</SetupButton>
                      <SetupButton active={startPos === StartPosition.RANDOM} onClick={() => setStartPos(StartPosition.RANDOM)} color="pink">Random Start</SetupButton>
                   </div>
            </div>
-           <div className="space-y-4 pt-4 border-t border-purple-500/30">
-               <button onClick={() => props.onFindMatch(duration, startPos, walls)} className="w-full bg-purple-500 text-white font-bold py-3 rounded-lg button-glow button-glow-purple">Find Random Match</button>
+           <div className="space-y-4 pt-4 border-t border-fuchsia-500/30">
+               <button onClick={() => props.onFindMatch(duration, startPos, walls)} className="w-full bg-fuchsia-500 text-white font-bold py-3 rounded-lg button-glow button-glow-purple">Find Random Match</button>
                <div className="text-center text-gray-400">OR</div>
                <button onClick={() => props.onCreateGame(duration, startPos, walls)} className="w-full bg-green-500 text-white font-bold py-3 rounded-lg button-glow button-glow-green">Create Private Game</button>
                <div className="flex items-center space-x-2">
-                   <input type="text" value={joinGameId} onChange={(e) => setJoinGameId(e.target.value)} className="w-full p-3 rounded-lg bg-black/30 border border-purple-500/50" placeholder="Paste Game ID" />
-                   <button onClick={() => props.onJoinGame(joinGameId)} disabled={!joinGameId} className="p-3 rounded-lg bg-blue-500 text-white font-bold button-glow button-glow-blue disabled:opacity-50">Join</button>
+                   <input type="text" value={joinGameId} onChange={(e) => setJoinGameId(e.target.value)} className="w-full p-3 rounded-lg bg-black/30 border border-fuchsia-500/50" placeholder="Paste Game ID" />
+                   <button onClick={() => props.onJoinGame(joinGameId)} disabled={!joinGameId} className="p-3 rounded-lg bg-cyan-500 text-white font-bold button-glow button-glow-cyan disabled:opacity-50">Join</button>
                </div>
            </div>
        </div>
@@ -567,7 +567,7 @@ const JoinGamePrompt: React.FC<JoinGamePromptProps> = ({ gameId, initialPlayerNa
                 id="joinPlayerName"
                 value={playerName}
                 onChange={(e) => setPlayerName(e.target.value)}
-                className="w-full p-3 rounded-lg bg-black/30 border-2 border-purple-500/50 focus:outline-none focus:ring-2 focus:ring-purple-400 transition"
+                className="w-full p-3 rounded-lg bg-black/30 border-2 border-fuchsia-500/50 focus:outline-none focus:ring-2 focus:ring-fuchsia-400 transition"
                 placeholder="Enter your name"
               />
             </div>
@@ -575,7 +575,7 @@ const JoinGamePrompt: React.FC<JoinGamePromptProps> = ({ gameId, initialPlayerNa
               <button onClick={handleJoin} className="w-full bg-green-500 text-white font-bold py-3 rounded-lg button-glow button-glow-green">
                 Join Game
               </button>
-              <button onClick={onCancel} className="w-full bg-red-500 text-white font-bold py-3 rounded-lg button-glow button-glow-red">
+              <button onClick={onCancel} className="w-full bg-orange-500 text-white font-bold py-3 rounded-lg button-glow button-glow-orange">
                 Cancel
               </button>
             </div>

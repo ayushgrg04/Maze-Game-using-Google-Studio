@@ -2,7 +2,7 @@ import React from 'react';
 
 export const AnimatedMenuBackground: React.FC = () => {
   const particles = Array.from({ length: 25 });
-  const colors = ['#a855f7', '#ec4899', '#f59e0b', '#3b82f6'];
+  const colors = ['#c026d3', '#ec4899', '#22d3ee', '#f97316'];
 
   return (
     <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden="true">

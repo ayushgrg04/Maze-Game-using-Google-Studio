@@ -146,7 +146,7 @@ const useGameLogic = () => {
     const p1Col = startPos === StartPosition.CENTER ? Math.floor(BOARD_SIZE / 2) : Math.floor(Math.random() * BOARD_SIZE);
     const p2Col = startPos === StartPosition.CENTER ? Math.floor(BOARD_SIZE / 2) : (BOARD_SIZE - 1) - p1Col;
     
-    const p1: Player = { id: 1, name: p1Name, color: '#3b82f6', position: { r: BOARD_SIZE - 1, c: p1Col }, wallsLeft: wallsCount, goalRow: 0 };
+    const p1: Player = { id: 1, name: p1Name, color: '#22d3ee', position: { r: BOARD_SIZE - 1, c: p1Col }, wallsLeft: wallsCount, goalRow: 0 };
     const p2: Player = { id: 2, name: p2Name, color: '#ec4899', position: { r: 0, c: p2Col }, wallsLeft: wallsCount, goalRow: BOARD_SIZE - 1 };
 
     setPlayers({ 1: p1, 2: p2 });
@@ -366,7 +366,7 @@ const useGameLogic = () => {
     setGameMode(GameMode.PVO);
     setInitialWalls(wallsCount);
     const p1Col = startPos === StartPosition.CENTER ? Math.floor(BOARD_SIZE / 2) : Math.floor(Math.random() * BOARD_SIZE);
-    const p1: Player = { id: 1, name: p1Name, color: '#3b82f6', position: { r: BOARD_SIZE - 1, c: p1Col }, wallsLeft: wallsCount, goalRow: 0 };
+    const p1: Player = { id: 1, name: p1Name, color: '#22d3ee', position: { r: BOARD_SIZE - 1, c: p1Col }, wallsLeft: wallsCount, goalRow: 0 };
     setPlayers({ 1: p1 });
     setConfiguredTurnTime(duration);
     setGameState(GameState.ONLINE_WAITING);

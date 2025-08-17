@@ -257,7 +257,7 @@ class OnlineGameService {
         const p1Col = request.startPos === StartPosition.CENTER ? Math.floor(BOARD_SIZE / 2) : Math.floor(Math.random() * BOARD_SIZE);
         const p2Col = (BOARD_SIZE - 1) - p1Col;
         
-        const p1: Player = { ...p1Data, id: 1, color: '#3b82f6', position: { r: BOARD_SIZE - 1, c: p1Col }, goalRow: 0 };
+        const p1: Player = { ...p1Data, id: 1, color: '#22d3ee', position: { r: BOARD_SIZE - 1, c: p1Col }, goalRow: 0 };
         const p2: Player = { ...p2Data, id: 2, color: '#ec4899', position: { r: 0, c: p2Col }, goalRow: BOARD_SIZE - 1 };
         
         const gameId = Math.random().toString(36).substr(2, 6);

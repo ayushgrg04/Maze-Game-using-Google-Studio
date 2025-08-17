@@ -11,7 +11,7 @@ const content = {
     tabs: { goal: 'The Goal', gameplay: 'Gameplay', moving: 'Moving', walls: 'Placing Walls' },
     goalTitle: "The Goal: Reach the Other Side",
     goalText: "Be the first player to move your pawn to any space on your opponent's starting side of the board.",
-    goalCaption: "Player 1 (Blue) must reach the top row, and Player 2 (Pink) must reach the bottom row.",
+    goalCaption: "Player 1 (Cyan) must reach the top row, and Player 2 (Pink) must reach the bottom row.",
     gameplayTitle: "Your Turn: Move or Place a Wall",
     gameplayText: "On your turn, you must choose to do one of two things:",
     gameplayMove: "Move your pawn one space.",
@@ -38,7 +38,7 @@ const content = {
     tabs: { goal: 'लक्ष्य', gameplay: 'गेमप्ले', moving: 'चलना', walls: 'दीवारें' },
     goalTitle: "लक्ष्य: दूसरी तरफ पहुंचें",
     goalText: "अपने मोहरे को बोर्ड के दूसरी तरफ (आपके निर्धारित लक्ष्य पंक्ति) किसी भी स्थान पर ले जाने वाले पहले खिलाड़ी बनें।",
-    goalCaption: "खिलाड़ी 1 (नीला) को शीर्ष पंक्ति तक पहुंचना है, और खिलाड़ी 2 (गुलाबी) को निचली पंक्ति तक पहुंचना है।",
+    goalCaption: "खिलाड़ी 1 (सियान) को शीर्ष पंक्ति तक पहुंचना है, और खिलाड़ी 2 (गुलाबी) को निचली पंक्ति तक पहुंचना है।",
     gameplayTitle: "आपकी बारी: चलें या दीवार रखें",
     gameplayText: "अपनी बारी पर, आपको निम्नलिखित में से कोई एक चुनना होगा:",
     gameplayMove: "अपने मोहरे को एक स्थान पर ले जाएं।",
@@ -90,7 +90,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
     <Modal title="" onClose={onClose} className="max-w-xl">
         <div className="flex justify-between items-center mb-4 -mt-2">
             <h2 className="text-3xl font-magic text-white text-glow-purple">{c.tabs[activeTab]}</h2>
-            <button onClick={toggleLanguage} className="px-3 py-1 text-sm font-semibold text-white bg-indigo-500 rounded-md hover:bg-indigo-600 transition-colors shadow-sm button-glow button-glow-purple">
+            <button onClick={toggleLanguage} className="px-3 py-1 text-sm font-semibold text-white bg-fuchsia-600 rounded-md hover:bg-fuchsia-700 transition-colors shadow-sm button-glow button-glow-purple">
                 {c.toggleButton}
             </button>
         </div>
@@ -111,10 +111,10 @@ const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
                      <svg width="100%" height="100%" viewBox="0 0 100 100">
                         <defs><filter id="glow-help" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
                         <rect width="100" height="11" fill="#ec4899" fillOpacity="0.4"/>
-                        <rect y="89" width="100" height="11" fill="#3b82f6" fillOpacity="0.4"/>
-                        <circle cx="50" cy="94" r="5" fill="#3b82f6" filter="url(#glow-help)" />
-                        <path d="M 50 85 C 40 60, 40 40, 50 15" stroke="#3b82f6" strokeWidth="2" fill="none" strokeDasharray="4 4" />
-                        <path d="M 45 20 L 50 15 L 55 20" stroke="#3b82f6" strokeWidth="2" fill="none" />
+                        <rect y="89" width="100" height="11" fill="#22d3ee" fillOpacity="0.4"/>
+                        <circle cx="50" cy="94" r="5" fill="#22d3ee" filter="url(#glow-help)" />
+                        <path d="M 50 85 C 40 60, 40 40, 50 15" stroke="#22d3ee" strokeWidth="2" fill="none" strokeDasharray="4 4" />
+                        <path d="M 45 20 L 50 15 L 55 20" stroke="#22d3ee" strokeWidth="2" fill="none" />
                      </svg>
                  </RuleIllustration>
             </div>
@@ -123,7 +123,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
              <div className="space-y-4">
                 <p className="text-lg leading-relaxed">{c.gameplayText}</p>
                 <ul className="list-none space-y-3 pl-2">
-                    <li className="flex items-start gap-3"><div className="w-5 h-5 rounded-full bg-blue-500 flex-shrink-0 mt-1" style={{boxShadow: '0 0 8px var(--glow-blue)'}}></div><span><strong>{c.gameplayMove.split(':')[0]}:</strong> {c.gameplayMove.split(':')[1]}</span></li>
+                    <li className="flex items-start gap-3"><div className="w-5 h-5 rounded-full bg-cyan-400 flex-shrink-0 mt-1" style={{boxShadow: '0 0 8px var(--glow-cyan)'}}></div><span><strong>{c.gameplayMove.split(':')[0]}:</strong> {c.gameplayMove.split(':')[1]}</span></li>
                     <li className="flex items-start gap-3"><div className="w-5 h-5 rounded-md bg-purple-500 flex-shrink-0 mt-1" style={{boxShadow: '0 0 8px var(--glow-purple)'}}></div><span><strong>{c.gameplayPlace.split(':')[0]}:</strong> {c.gameplayPlace.split(':')[1]}</span></li>
                 </ul>
             </div>
@@ -135,13 +135,13 @@ const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
                 <p><strong>{c.movingDiagonal.split(':')[0]}:</strong> {c.movingDiagonal.split(':')[1]}</p>
                 <div className="grid grid-cols-3 gap-2 pt-2">
                     <RuleIllustration caption={c.captionMove}>
-                        <svg width="100%" height="100%" viewBox="0 0 100 100"><defs><filter id="glow-help" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path d="M 0 33 H 100 M 0 66 H 100 M 33 0 V 100 M 66 0 V 100" stroke="#4a2d7d" strokeWidth="1"/><circle cx="50" cy="50" r="12" fill="#3b82f6" filter="url(#glow-help)"/><circle cx="50" cy="17" r="8" fill="#3b82f6" opacity="0.6" filter="url(#glow-help)"/><circle cx="50" cy="83" r="8" fill="#3b82f6" opacity="0.6" filter="url(#glow-help)"/><circle cx="17" cy="50" r="8" fill="#3b82f6" opacity="0.6" filter="url(#glow-help)"/><circle cx="83" cy="50" r="8" fill="#3b82f6" opacity="0.6" filter="url(#glow-help)"/></svg>
+                        <svg width="100%" height="100%" viewBox="0 0 100 100"><defs><filter id="glow-help" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path d="M 0 33 H 100 M 0 66 H 100 M 33 0 V 100 M 66 0 V 100" stroke="#4a2d7d" strokeWidth="1"/><circle cx="50" cy="50" r="12" fill="#22d3ee" filter="url(#glow-help)"/><circle cx="50" cy="17" r="8" fill="#22d3ee" opacity="0.6" filter="url(#glow-help)"/><circle cx="50" cy="83" r="8" fill="#22d3ee" opacity="0.6" filter="url(#glow-help)"/><circle cx="17" cy="50" r="8" fill="#22d3ee" opacity="0.6" filter="url(#glow-help)"/><circle cx="83" cy="50" r="8" fill="#22d3ee" opacity="0.6" filter="url(#glow-help)"/></svg>
                     </RuleIllustration>
                     <RuleIllustration caption={c.captionJump}>
-                        <svg width="100%" height="100%" viewBox="0 0 100 100"><defs><filter id="glow-help" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path d="M 0 33 H 100 M 0 66 H 100 M 33 0 V 100 M 66 0 V 100" stroke="#4a2d7d" strokeWidth="1"/><circle cx="50" cy="83" r="12" fill="#3b82f6" filter="url(#glow-help)"/><circle cx="50" cy="50" r="12" fill="#ec4899" filter="url(#glow-help)"/><circle cx="50" cy="17" r="8" fill="#3b82f6" opacity="0.6" filter="url(#glow-help)"/></svg>
+                        <svg width="100%" height="100%" viewBox="0 0 100 100"><defs><filter id="glow-help" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path d="M 0 33 H 100 M 0 66 H 100 M 33 0 V 100 M 66 0 V 100" stroke="#4a2d7d" strokeWidth="1"/><circle cx="50" cy="83" r="12" fill="#22d3ee" filter="url(#glow-help)"/><circle cx="50" cy="50" r="12" fill="#ec4899" filter="url(#glow-help)"/><circle cx="50" cy="17" r="8" fill="#22d3ee" opacity="0.6" filter="url(#glow-help)"/></svg>
                     </RuleIllustration>
                     <RuleIllustration caption={c.captionDiagonal}>
-                        <svg width="100%" height="100%" viewBox="0 0 100 100"><defs><filter id="glow-help" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path d="M 0 33 H 100 M 0 66 H 100 M 33 0 V 100 M 66 0 V 100" stroke="#4a2d7d" strokeWidth="1"/><circle cx="50" cy="83" r="12" fill="#3b82f6" filter="url(#glow-help)"/><circle cx="50" cy="50" r="12" fill="#ec4899" filter="url(#glow-help)"/><rect x="0" y="30" width="100" height="8" fill="#a855f7" rx="3" filter="url(#glow-help)"/><circle cx="17" cy="50" r="8" fill="#3b82f6" opacity="0.6" filter="url(#glow-help)"/><circle cx="83" cy="50" r="8" fill="#3b82f6" opacity="0.6" filter="url(#glow-help)"/></svg>
+                        <svg width="100%" height="100%" viewBox="0 0 100 100"><defs><filter id="glow-help" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path d="M 0 33 H 100 M 0 66 H 100 M 33 0 V 100 M 66 0 V 100" stroke="#4a2d7d" strokeWidth="1"/><circle cx="50" cy="83" r="12" fill="#22d3ee" filter="url(#glow-help)"/><circle cx="50" cy="50" r="12" fill="#ec4899" filter="url(#glow-help)"/><rect x="0" y="30" width="100" height="8" fill="#a855f7" rx="3" filter="url(#glow-help)"/><circle cx="17" cy="50" r="8" fill="#22d3ee" opacity="0.6" filter="url(#glow-help)"/><circle cx="83" cy="50" r="8" fill="#22d3ee" opacity="0.6" filter="url(#glow-help)"/></svg>
                     </RuleIllustration>
                 </div>
             </div>
@@ -156,13 +156,13 @@ const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
                         <svg width="100%" height="100%" viewBox="0 0 100 100"><defs><filter id="glow-help" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path d="M 0 50 H 100 M 50 0 V 100" stroke="#4a2d7d" strokeWidth="1"/><rect x="46" y="0" width="8" height="66" fill="#a855f7" rx="3" filter="url(#glow-help)"/></svg>
                     </RuleIllustration>
                     <RuleIllustration caption={c.captionInvalidWall}>
-                        <svg width="100%" height="100%" viewBox="0 0 100 100"><defs><filter id="glow-help" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path d="M 0 33 H 100 M 0 66 H 100 M 33 0 V 100 M 66 0 V 100" stroke="#4a2d7d" strokeWidth="1"/><circle cx="50" cy="83" r="12" fill="#ec4899" filter="url(#glow-help)"/><rect x="0" y="63" width="66" height="8" fill="#a855f7" rx="3" filter="url(#glow-help)"/><rect x="33" y="63" width="66" height="8" fill="#a855f7" rx="3" filter="url(#glow-help)"/><rect x="63" y="0" width="8" height="66" fill="#ef4444" rx="3" filter="url(#glow-help)"/><path d="M 70 30 L 95 5 M 95 30 L 70 5" stroke="#ef4444" strokeWidth="6" strokeLinecap="round"/></svg>
+                        <svg width="100%" height="100%" viewBox="0 0 100 100"><defs><filter id="glow-help" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path d="M 0 33 H 100 M 0 66 H 100 M 33 0 V 100 M 66 0 V 100" stroke="#4a2d7d" strokeWidth="1"/><circle cx="50" cy="83" r="12" fill="#ec4899" filter="url(#glow-help)"/><rect x="0" y="63" width="66" height="8" fill="#a855f7" rx="3" filter="url(#glow-help)"/><rect x="33" y="63" width="66" height="8" fill="#a855f7" rx="3" filter="url(#glow-help)"/><rect x="63" y="0" width="8" height="66" fill="#f97316" rx="3" filter="url(#glow-help)"/><path d="M 70 30 L 95 5 M 95 30 L 70 5" stroke="#f97316" strokeWidth="6" strokeLinecap="round"/></svg>
                     </RuleIllustration>
                     <RuleIllustration caption={c.captionValidT}>
                         <svg width="100%" height="100%" viewBox="0 0 100 100"><defs><filter id="glow-help" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path d="M 0 50 H 100 M 50 0 V 100" stroke="#4a2d7d" strokeWidth="1"/><rect x="50" y="46" width="50" height="8" fill="#a855f7" rx="3" filter="url(#glow-help)"/><rect x="46" y="0" width="8" height="66" fill="#a855f7" rx="3" filter="url(#glow-help)"/></svg>
                     </RuleIllustration>
                     <RuleIllustration caption={c.captionInvalidCross}>
-                        <svg width="100%" height="100%" viewBox="0 0 100 100"><defs><filter id="glow-help" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path d="M 0 50 H 100 M 50 0 V 100" stroke="#4a2d7d" strokeWidth="1"/><rect x="0" y="46" width="66" height="8" fill="#a855f7" rx="3" filter="url(#glow-help)"/><rect x="46" y="0" width="8" height="66" fill="#ef4444" rx="3" filter="url(#glow-help)"/><path d="M 70 30 L 95 5 M 95 30 L 70 5" stroke="#ef4444" strokeWidth="6" strokeLinecap="round"/></svg>
+                        <svg width="100%" height="100%" viewBox="0 0 100 100"><defs><filter id="glow-help" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" result="coloredBlur"/><feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><path d="M 0 50 H 100 M 50 0 V 100" stroke="#4a2d7d" strokeWidth="1"/><rect x="0" y="46" width="66" height="8" fill="#a855f7" rx="3" filter="url(#glow-help)"/><rect x="46" y="0" width="8" height="66" fill="#f97316" rx="3" filter="url(#glow-help)"/><path d="M 70 30 L 95 5 M 95 30 L 70 5" stroke="#f97316" strokeWidth="6" strokeLinecap="round"/></svg>
                     </RuleIllustration>
                 </div>
             </div>
