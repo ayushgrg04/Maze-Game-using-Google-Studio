@@ -95,6 +95,16 @@ const App: React.FC = () => {
     const [boardSize, setBoardSize] = useState(0);
 
     useEffect(() => {
+        const splashScreen = document.getElementById('splash-screen');
+        if (splashScreen) {
+            splashScreen.classList.add('fade-out');
+            setTimeout(() => {
+                splashScreen.remove();
+            }, 500); // Match CSS transition time
+        }
+    }, []);
+
+    useEffect(() => {
         if (gameState !== GameState.PLAYING && gameState !== GameState.GAME_OVER) {
             return;
         }
