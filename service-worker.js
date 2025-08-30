@@ -1,9 +1,10 @@
 const CACHE_NAME = 'gemini-maze-race-cache-v1';
 const ASSETS_TO_CACHE = [
     '/',
-    '/index.html'
-    // Other assets like JS modules from esm.sh and CSS from CDNs
-    // will be cached dynamically by the fetch handler as they are requested.
+    '/index.html',
+    '/splash.png',
+    '/icons/icon-192x192.png',
+    '/icons/icon-512x512.png'
 ];
 
 // Install event: cache the application shell
