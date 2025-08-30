@@ -7,6 +7,7 @@ import { authService } from '../services/authService';
 import { findShortestPath, getPossibleMoves } from '../utils/pathfinding';
 import type { Player, Position, Wall, AiAction, OnlineGameData, OnlineGameAction } from '../types';
 import { GameState, GameMode, Difficulty, AiType, StartPosition } from '../types';
+import { soundService, Sound } from '../services/soundService';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -303,6 +304,7 @@ const useGameLogic = () => {
     const moveIsValid = possibleMoves.some(move => move.r === realTo.r && move.c === realTo.c);
 
     if (moveIsValid) {
+        soundService.play(Sound.MovePawn);
         if (gameMode === GameMode.PVO && onlineGameId && onlinePlayerId) {
             const currentState: OnlineGameData = { players, walls, currentPlayerId, winner, gameTime, turnTime, timestamp: lastStateTimestamp };
             const nextState = applyActionToState(currentState, { type: 'MOVE', to: realTo }, onlinePlayerId);
@@ -338,6 +340,7 @@ const useGameLogic = () => {
         return;
     }
 
+    soundService.play(Sound.PlaceWall);
     if(gameMode === GameMode.PVO && onlineGameId && onlinePlayerId) {
         const currentState: OnlineGameData = { players, walls, currentPlayerId, winner, gameTime, turnTime, timestamp: lastStateTimestamp };
         const nextState = applyActionToState(currentState, { type: 'PLACE_WALL', wall: realWall }, onlinePlayerId);
@@ -592,6 +595,32 @@ const useGameLogic = () => {
     return () => clearInterval(intervalId);
   }, [gameState, gameMode, onlineGameId, currentPlayerId, onlinePlayerId, winner, updateStateFromOnline]);
 
+  const prevGameState = useRef(gameState);
+  useEffect(() => {
+    if (prevGameState.current !== GameState.PLAYING && gameState === GameState.PLAYING) {
+        soundService.play(Sound.StartGame);
+    }
+    prevGameState.current = gameState;
+  }, [gameState]);
+
+  useEffect(() => {
+    if (!winner) return;
+
+    if (gameMode === GameMode.PVO) {
+        if (winner.id === onlinePlayerId) {
+            soundService.play(Sound.WinGame);
+        } else {
+            soundService.play(Sound.LoseGame);
+        }
+    } else {
+        // For local games, player 1 is the human user.
+        if (winner.id === 1 || (gameMode === GameMode.PVP && winner.id === 2)) {
+            soundService.play(Sound.WinGame);
+        } else {
+            soundService.play(Sound.LoseGame);
+        }
+    }
+  }, [winner, gameMode, onlinePlayerId]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
