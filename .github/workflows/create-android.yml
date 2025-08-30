@@ -37,8 +37,13 @@ jobs:
       - name: Create Build Folder
         run: npm run build
 
-      - name: Add android folder if not present
-        run: if [ ! -d "./android" ]; then npx cap init MazeMagic com.fungames.mazemagic;npx cap add android; fi
+      - name: Initialize Capacitor and Add Android
+        run: |
+          npx cap init MazeMagic com.fungames.mazemagic || true
+          npx cap add android || true
+          mkdir -p android/app/src/main/assets
+          npx cap update
+          npx cap copy      
 
       - name: Capacitor update
         run: npx cap update
