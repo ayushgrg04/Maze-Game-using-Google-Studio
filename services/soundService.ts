@@ -12,14 +12,14 @@ export enum Sound {
 // Map sound enum to their corresponding file paths using relative paths to
 // ensure they work correctly in subdirectory deployments (e.g., GitHub Pages).
 const soundFiles: Record<Sound, string> = {
-  [Sound.UIClick]: './sounds/ui-click.mp3',
-  [Sound.StartGame]: './sounds/start-game.mp3',
-  [Sound.MovePawn]: './sounds/move-pawn.mp3',
-  [Sound.PlaceWall]: './sounds/place-wall.mp3',
-  [Sound.WinGame]: './sounds/win-game.mp3',
-  [Sound.LoseGame]: './sounds/lose-game.mp3',
-  [Sound.TimerTick]: './sounds/timer-tick.mp3',
-  [Sound.Error]: './sounds/error.mp3',
+  [Sound.UIClick]: 'sounds/ui-click.mp3',
+  [Sound.StartGame]: 'sounds/start-game.mp3',
+  [Sound.MovePawn]: 'sounds/move-pawn.mp3',
+  [Sound.PlaceWall]: 'sounds/place-wall.mp3',
+  [Sound.WinGame]: 'sounds/win-game.mp3',
+  [Sound.LoseGame]: 'sounds/lose-game.mp3',
+  [Sound.TimerTick]: 'sounds/timer-tick.mp3',
+  [Sound.Error]: 'sounds/error.mp3',
 };
 
 
