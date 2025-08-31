@@ -9,24 +9,18 @@ export enum Sound {
   Error = 'error',
 }
 
-// Helper to construct absolute URLs for assets, resolving pathing issues in sandboxed environments.
-const getAbsolutePath = (path: string): string => {
-    if (typeof window === 'undefined') return path;
-    // In some environments, root-relative paths might resolve against the wrong origin.
-    // Prepending window.location.origin ensures we always fetch from our own domain.
-    return `${window.location.origin}${path}`;
-}
-
-// Map sound enum to their corresponding file paths
+// Map sound enum to their corresponding file paths using root-relative paths.
+// The browser will handle resolving them against the current origin, which is
+// more robust for various deployment environments (e.g., subdirectories).
 const soundFiles: Record<Sound, string> = {
-  [Sound.UIClick]: getAbsolutePath('/sounds/ui-click.mp3'),
-  [Sound.StartGame]: getAbsolutePath('/sounds/start-game.mp3'),
-  [Sound.MovePawn]: getAbsolutePath('/sounds/move-pawn.mp3'),
-  [Sound.PlaceWall]: getAbsolutePath('/sounds/place-wall.mp3'),
-  [Sound.WinGame]: getAbsolutePath('/sounds/win-game.mp3'),
-  [Sound.LoseGame]: getAbsolutePath('/sounds/lose-game.mp3'),
-  [Sound.TimerTick]: getAbsolutePath('/sounds/timer-tick.mp3'),
-  [Sound.Error]: getAbsolutePath('/sounds/error.mp3'),
+  [Sound.UIClick]: '/sounds/ui-click.mp3',
+  [Sound.StartGame]: '/sounds/start-game.mp3',
+  [Sound.MovePawn]: '/sounds/move-pawn.mp3',
+  [Sound.PlaceWall]: '/sounds/place-wall.mp3',
+  [Sound.WinGame]: '/sounds/win-game.mp3',
+  [Sound.LoseGame]: '/sounds/lose-game.mp3',
+  [Sound.TimerTick]: '/sounds/timer-tick.mp3',
+  [Sound.Error]: '/sounds/error.mp3',
 };
 
 
