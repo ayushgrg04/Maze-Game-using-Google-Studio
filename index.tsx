@@ -4,7 +4,9 @@ import App from './App';
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js')
+    // Use an absolute URL to avoid cross-origin issues in the sandboxed environment.
+    const swUrl = `${window.location.origin}/service-worker.js`;
+    navigator.serviceWorker.register(swUrl)
       .then(registration => {
         console.log('ServiceWorker registration successful with scope: ', registration.scope);
       })
