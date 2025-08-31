@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Modal from './Modal';
+import { soundService, Sound } from '../services/soundService';
 
 type HelpModalProps = {
   onClose: () => void;
@@ -64,7 +65,7 @@ const content = {
 };
 
 const TabButton: React.FC<{ active: boolean, onClick: () => void, children: React.ReactNode }> = ({ active, onClick, children }) => (
-    <button onClick={onClick} className={`px-4 py-2 text-sm md:text-base font-bold rounded-t-lg transition-all duration-300 relative ${active ? 'text-white' : 'text-gray-400 hover:text-white'}`}>
+    <button onClick={onClick} className={`flex-shrink-0 px-4 py-2 text-sm md:text-base font-bold rounded-t-lg transition-all duration-300 relative ${active ? 'text-white' : 'text-gray-400 hover:text-white'}`}>
         {children}
         {active && <div className="absolute bottom-0 left-0 right-0 h-1 bg-purple-500 rounded-full" style={{boxShadow: '0 0 8px var(--glow-purple)'}}></div>}
     </button>
@@ -84,7 +85,15 @@ const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
   const [activeTab, setActiveTab] = useState<Tab>('goal');
   const c = content[language];
 
-  const toggleLanguage = () => setLanguage(prev => (prev === 'en' ? 'hi' : 'en'));
+  const toggleLanguage = () => {
+    soundService.play(Sound.UIClick);
+    setLanguage(prev => (prev === 'en' ? 'hi' : 'en'));
+  };
+  
+  const handleTabClick = (tab: Tab) => {
+    soundService.play(Sound.UIClick);
+    setActiveTab(tab);
+  };
 
   return (
     <Modal title="" onClose={onClose} className="max-w-xl">
@@ -95,9 +104,9 @@ const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
             </button>
         </div>
         <div className="border-b border-purple-500/30 -mx-8 px-8">
-            <div className="flex space-x-2">
+            <div className="flex space-x-2 overflow-x-auto whitespace-nowrap pb-2 -mb-2 custom-scrollbar-horizontal">
                 {(Object.keys(c.tabs) as Tab[]).map(tab => (
-                    <TabButton key={tab} active={activeTab === tab} onClick={() => setActiveTab(tab)}>
+                    <TabButton key={tab} active={activeTab === tab} onClick={() => handleTabClick(tab)}>
                         {c.tabs[tab]}
                     </TabButton>
                 ))}
@@ -173,6 +182,10 @@ const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(168, 85, 247, 0.5); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(168, 85, 247, 0.8); }
+        .custom-scrollbar-horizontal::-webkit-scrollbar { height: 6px; }
+        .custom-scrollbar-horizontal::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar-horizontal::-webkit-scrollbar-thumb { background-color: rgba(168, 85, 247, 0.4); border-radius: 3px; }
+        .custom-scrollbar-horizontal::-webkit-scrollbar-thumb:hover { background-color: rgba(168, 85, 247, 0.7); }
       `}</style>
     </Modal>
   );

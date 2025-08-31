@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import useGameLogic from './hooks/useGameLogic';
+import { useGameLogic } from './hooks/useGameLogic';
 import GameBoard from './components/GameBoard';
 import PlayerInfo from './components/PlayerInfo';
 import Modal from './components/Modal';
@@ -69,6 +69,21 @@ const BackButton: React.FC<{ onClick: () => void; className?: string }> = ({ onC
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
     </svg>
   </button>
+);
+
+const MuteButton: React.FC<{ isMuted: boolean; onClick: () => void; }> = ({ isMuted, onClick }) => (
+    <button
+        onClick={onClick}
+        title={isMuted ? "Unmute" : "Mute"}
+        className="fixed top-4 right-4 z-40 p-3 rounded-full bg-black/40 hover:bg-black/60 text-gray-300 hover:text-white transition-all button-glow"
+        aria-label={isMuted ? "Unmute sound" : "Mute sound"}
+    >
+        {isMuted ? (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clipRule="evenodd" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l4-4m0 4l-4-4" /></svg>
+        ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M20 4a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+        )}
+    </button>
 );
 
 
@@ -219,6 +234,7 @@ const App: React.FC = () => {
         }
         return (
             <>
+                <MuteButton isMuted={isMuted} onClick={withSound(handleToggleMute)} />
                 <AnimatedMenuBackground />
 
                 {showHelp && <HelpModal onClose={withSound(() => setShowHelp(false))} />}
@@ -264,175 +280,171 @@ const App: React.FC = () => {
     const aiPlayerName = players[2]?.name || 'AI';
 
     return (
-        <main className={`h-screen max-h-[100dvh] w-full grid grid-rows-[auto_1fr_auto] p-2 sm:p-4 bg-gradient-to-b from-[var(--dark-bg-start)] to-[var(--dark-bg-end)] overflow-hidden`}>
-            <header className="w-full max-w-2xl flex-shrink-0 mx-auto">
-                 <div className="flex justify-between items-center w-full">
-                    <div className="relative flex-1">
-                        <div className="inline-block relative">
-                          {opponentPlayer && <PlayerInfo player={opponentPlayer} />}
-                          {gameMode === GameMode.PVC && aiMessage && <AiChatTooltip message={aiMessage} />}
-                        </div>
-                    </div>
-                    <div className="text-center flex-1">
-                        <p className="text-sm font-medium text-gray-400">GAME TIME</p>
-                        <p className="text-2xl font-bold text-gray-200">{formatTime(gameTime)}</p>
-                    </div>
-                    <div className="flex-1 flex justify-end">
-                        {currentPlayer?.id === opponentPlayer?.id && <TurnTimer turnTime={turnTime} player={currentPlayer} />}
-                    </div>
-                </div>
-            </header>
-
-            <div className="w-full flex flex-col items-center justify-center py-1 min-h-0">
-                <div className="h-12 flex items-center justify-center my-1 flex-shrink-0">
-                  {aiThinking ? (
-                     <div className="magical-container p-3 rounded-full flex items-center gap-3 z-10">
-                       <svg className="animate-spin h-5 w-5 text-purple-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                        <span className="font-semibold text-gray-300">{aiPlayerName} is thinking...</span>
-                    </div>
-                  ) : (
-                    currentPlayer && <TurnIndicator player={currentPlayer} />
-                  )}
-                </div>
-                <div ref={gameBoardSizerRef} className="w-full flex-1 flex items-center justify-center min-h-0">
-                    <div style={{ width: boardSize > 0 ? `${boardSize}px` : '100%', height: boardSize > 0 ? `${boardSize}px` : '100%' }}>
-                        <GameBoard 
-                            players={players} 
-                            walls={walls}
-                            currentPlayerId={currentPlayerId}
-                            selectedPiece={selectedPiece}
-                            validMoves={validMoves}
-                            isPlacingWall={isPlacingWall}
-                            wallPreview={wallPreview}
-                            onCellClick={handleCellClick}
-                            onWallPreview={handleWallPreview}
-                            onCancelWallPreview={cancelWallPlacement}
-                        />
-                    </div>
-                </div>
-            </div>
-
-            <footer className="w-full max-w-2xl flex-shrink-0 mx-auto">
-                <div className="flex justify-between items-center w-full">
-                    <div className="flex-1 flex justify-start">
-                        {currentPlayer?.id === myPlayer?.id && <TurnTimer turnTime={turnTime} player={currentPlayer} />}
-                    </div>
-                    <div className="flex-1" />
-                    <div className="flex-1 flex justify-end">
-                        {myPlayer && <PlayerInfo player={myPlayer} />}
-                    </div>
-                </div>
-
-                {wallPreview ? (
-                     <div className="flex w-full space-x-4 mt-4">
-                         <button onClick={withSound(cancelWallPlacement)} className="w-full py-3 rounded-lg font-bold text-white bg-orange-500 button-glow button-glow-orange">Cancel</button>
-                         <button onClick={withSound(confirmWallPlacement)} className="w-full py-3 rounded-lg font-bold text-white bg-green-500 button-glow button-glow-green">Confirm Wall</button>
-                    </div>
-                ) : (
-                    <div className="flex w-full items-center space-x-4 mt-4">
-                         <button onClick={withSound(handleToggleMute)} title={isMuted ? "Unmute" : "Mute"} className="w-16 h-14 flex-shrink-0 rounded-lg font-bold text-white bg-gray-600 hover:bg-gray-700 transition-all flex items-center justify-center">
-                            {isMuted ? (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clipRule="evenodd" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l4-4m0 4l-4-4" /></svg>
-                            ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M20 4a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-                            )}
-                         </button>
-                         <button onClick={withSound(togglePlacingWall)} disabled={!currentPlayer || currentPlayer.wallsLeft === 0 || !isMyTurn} className={`w-full h-14 rounded-lg font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed button-glow ${isPlacingWall ? 'bg-orange-500 button-glow-orange' : 'bg-cyan-500 button-glow-cyan'}`}>
-                            {isPlacingWall ? 'Cancel' : 'Place Wall'}
-                         </button>
-                         <button onClick={withSound(() => setShowNewGameConfirm(true))} className="w-full h-14 rounded-lg font-bold text-white bg-fuchsia-600 button-glow button-glow-purple">New Game</button>
-                    </div>
-                )}
-            </footer>
-            
-            {gameState === GameState.GAME_OVER && winner && (
-                <>
-                {winner.id === (onlinePlayerId ?? 1) && <Celebration />}
-                <Modal title="Game Over!">
-                    <div className="text-center">
-                        <div className="flex justify-center mb-6">
-                            <div className={`w-24 h-24 rounded-full flex items-center justify-center text-white font-bold text-5xl border-4 border-white/50`}
-                                style={{
-                                    backgroundColor: winner.color,
-                                    boxShadow: `0 0 20px ${winner.color}, 0 0 40px ${winner.color}, inset 0 0 10px rgba(255,255,255,0.8)`
-                                }}
-                            >
-                                <span className="font-magic" style={{ textShadow: '3px 3px 5px rgba(0,0,0,0.5)' }}>
-                                    {winner.id}
-                                </span>
+        <>
+            <MuteButton isMuted={isMuted} onClick={withSound(handleToggleMute)} />
+            <main className={`h-screen max-h-[100dvh] w-full grid grid-rows-[auto_1fr_auto] p-2 sm:p-4 bg-gradient-to-b from-[var(--dark-bg-start)] to-[var(--dark-bg-end)] overflow-hidden`}>
+                <header className="w-full max-w-2xl flex-shrink-0 mx-auto">
+                     <div className="flex justify-between items-center w-full">
+                        <div className="relative flex-1">
+                            <div className="inline-block relative">
+                              {opponentPlayer && <PlayerInfo player={opponentPlayer} />}
+                              {gameMode === GameMode.PVC && aiMessage && <AiChatTooltip message={aiMessage} />}
                             </div>
                         </div>
-                        <h3 className={`text-4xl font-magic mb-2`} style={{color: winner.color, textShadow: `0 0 10px ${winner.color}`}}>{winner.name} wins!</h3>
-                        {gameMode === GameMode.PVC && winner.id === 1 && (
-                            <p className="text-gray-300 mb-4 text-lg">
-                                You defeated <span className="font-bold">{players[2].name}</span>!
-                            </p>
-                        )}
-                        { turnTime <= 0 && <p className="text-gray-400 mb-4">The other player ran out of time.</p>}
-                        <div className="flex flex-col gap-4 mt-6">
-                           { gameMode !== GameMode.PVO && <button onClick={withSound(() => startGame(gameMode, difficulty, players[1].name, aiType, configuredTurnTime, startPosition, initialWalls))} className="w-full bg-green-500 text-white font-bold py-3 rounded-lg button-glow button-glow-green">Play Again</button>}
-                            <button onClick={withSound(returnToMenu)} className="w-full bg-fuchsia-600 text-white font-bold py-3 rounded-lg button-glow button-glow-purple">Main Menu</button>
+                        <div className="text-center flex-1">
+                            <p className="text-sm font-medium text-gray-400">GAME TIME</p>
+                            <p className="text-2xl font-bold text-gray-200">{formatTime(gameTime)}</p>
+                        </div>
+                        <div className="flex-1 flex justify-end">
+                            {currentPlayer?.id === opponentPlayer?.id && <TurnTimer turnTime={turnTime} player={currentPlayer} />}
                         </div>
                     </div>
-                </Modal>
-                </>
-            )}
-            {gameState === GameState.ONLINE_WAITING && (
-                <WaitingForOpponentModal 
-                    gameId={onlineGameId} 
-                    hasTimeout={!!onlineRequestTimeout} 
-                    onCancelSearch={withSound(handleCancelFindMatch)} 
-                    onCancelCreateGame={withSound(handleCancelCreateGame)}
-                />
-            )}
-            {showRateLimitModal && (
-                 <Modal title="API Limit Reached" onClose={withSound(() => setShowRateLimitModal(false))}>
-                    <div className="text-center space-y-4">
-                        <p className="text-gray-300">You've exceeded the request limit for Gemini. The AI will make a simple move. For an uninterrupted experience, try the offline <span className="font-bold text-white">Local AI</span>.</p>
-                        <button onClick={withSound(() => setShowRateLimitModal(false))} className="w-full bg-cyan-500 text-white font-bold py-3 rounded-lg button-glow button-glow-cyan">OK</button>
-                    </div>
-                </Modal>
-            )}
-            {showNewGameConfirm && (
-                <Modal title="Start New Game?" onClose={() => setShowNewGameConfirm(false)}>
-                    <div className="text-center space-y-4">
-                        <p className="text-gray-300">Are you sure? Your current game progress will be lost.</p>
-                        <div className="flex gap-4 mt-6">
-                            <button onClick={withSound(() => setShowNewGameConfirm(false))} className="w-full py-3 rounded-lg font-bold text-white bg-gray-600 hover:bg-gray-700 transition-all">Cancel</button>
-                            <button onClick={withSound(() => { setShowNewGameConfirm(false); returnToMenu(); })} className="w-full py-3 rounded-lg font-bold text-white bg-orange-500 button-glow button-glow-orange">Confirm</button>
-                        </div>
-                    </div>
-                </Modal>
-            )}
-            {errorToast && (
-                <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-orange-900/80 border border-orange-500 text-orange-200 px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50 animate-fade-in-down backdrop-blur-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    <span className="font-semibold">{errorToast}</span>
-                </div>
-            )}
-            <style>{`
-                @keyframes fade-in-down{from{opacity:0;transform:translate(-50%,-20px)}to{opacity:1;transform:translate(-50%,0)}}
-                .animate-fade-in-down{animation:fade-in-down .5s ease-out forwards}
+                </header>
 
-                @keyframes celebrate {
-                    0% { transform: translateY(0) scale(1); opacity: 1; }
-                    100% { transform: translateY(-120vh) scale(0.5); opacity: 0; }
-                }
-                .animate-celebrate {
-                    animation-name: celebrate;
-                    animation-timing-function: linear;
-                    animation-iteration-count: 1;
-                    animation-fill-mode: forwards;
-                }
-                @keyframes swirl {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-                .animate-swirl {
-                    animation: swirl 2s linear infinite;
-                }
-            `}</style>
-        </main>
+                <div className="w-full flex flex-col items-center justify-center py-1 min-h-0">
+                    <div className="h-12 flex items-center justify-center my-1 flex-shrink-0">
+                      {aiThinking ? (
+                         <div className="magical-container p-3 rounded-full flex items-center gap-3 z-10">
+                           <svg className="animate-spin h-5 w-5 text-purple-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            <span className="font-semibold text-gray-300">{aiPlayerName} is thinking...</span>
+                        </div>
+                      ) : (
+                        currentPlayer && <TurnIndicator player={currentPlayer} />
+                      )}
+                    </div>
+                    <div ref={gameBoardSizerRef} className="w-full flex-1 flex items-center justify-center min-h-0">
+                        <div style={{ width: boardSize > 0 ? `${boardSize}px` : '100%', height: boardSize > 0 ? `${boardSize}px` : '100%' }}>
+                            <GameBoard 
+                                players={players} 
+                                walls={walls}
+                                currentPlayerId={currentPlayerId}
+                                selectedPiece={selectedPiece}
+                                validMoves={validMoves}
+                                isPlacingWall={isPlacingWall}
+                                wallPreview={wallPreview}
+                                onCellClick={handleCellClick}
+                                onWallPreview={handleWallPreview}
+                                onCancelWallPreview={cancelWallPlacement}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <footer className="w-full max-w-2xl flex-shrink-0 mx-auto">
+                    <div className="flex justify-between items-center w-full">
+                        <div className="flex-1 flex justify-start">
+                            {currentPlayer?.id === myPlayer?.id && <TurnTimer turnTime={turnTime} player={currentPlayer} />}
+                        </div>
+                        <div className="flex-1" />
+                        <div className="flex-1 flex justify-end">
+                            {myPlayer && <PlayerInfo player={myPlayer} />}
+                        </div>
+                    </div>
+
+                    {wallPreview ? (
+                         <div className="flex w-full space-x-4 mt-4">
+                             <button onClick={withSound(cancelWallPlacement)} className="w-full py-3 rounded-lg font-bold text-white bg-orange-500 button-glow button-glow-orange">Cancel</button>
+                             <button onClick={withSound(confirmWallPlacement)} className="w-full py-3 rounded-lg font-bold text-white bg-green-500 button-glow button-glow-green">Confirm Wall</button>
+                        </div>
+                    ) : (
+                        <div className="flex w-full items-center space-x-4 mt-4">
+                             <button onClick={withSound(togglePlacingWall)} disabled={!currentPlayer || currentPlayer.wallsLeft === 0 || !isMyTurn} className={`w-full h-14 rounded-lg font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed button-glow ${isPlacingWall ? 'bg-orange-500 button-glow-orange' : 'bg-cyan-500 button-glow-cyan'}`}>
+                                {isPlacingWall ? 'Cancel' : 'Place Wall'}
+                             </button>
+                             <button onClick={withSound(() => setShowNewGameConfirm(true))} className="w-full h-14 rounded-lg font-bold text-white bg-fuchsia-600 button-glow button-glow-purple">New Game</button>
+                        </div>
+                    )}
+                </footer>
+                
+                {gameState === GameState.GAME_OVER && winner && (
+                    <>
+                    {winner.id === (onlinePlayerId ?? 1) && <Celebration />}
+                    <Modal title="Game Over!">
+                        <div className="text-center">
+                            <div className="flex justify-center mb-6">
+                                <div className={`w-24 h-24 rounded-full flex items-center justify-center text-white font-bold text-5xl border-4 border-white/50`}
+                                    style={{
+                                        backgroundColor: winner.color,
+                                        boxShadow: `0 0 20px ${winner.color}, 0 0 40px ${winner.color}, inset 0 0 10px rgba(255,255,255,0.8)`
+                                    }}
+                                >
+                                    <span className="font-magic" style={{ textShadow: '3px 3px 5px rgba(0,0,0,0.5)' }}>
+                                        {winner.id}
+                                    </span>
+                                </div>
+                            </div>
+                            <h3 className={`text-4xl font-magic mb-2`} style={{color: winner.color, textShadow: `0 0 10px ${winner.color}`}}>{winner.name} wins!</h3>
+                            {gameMode === GameMode.PVC && winner.id === 1 && (
+                                <p className="text-gray-300 mb-4 text-lg">
+                                    You defeated <span className="font-bold">{players[2].name}</span>!
+                                </p>
+                            )}
+                            { turnTime <= 0 && <p className="text-gray-400 mb-4">The other player ran out of time.</p>}
+                            <div className="flex flex-col gap-4 mt-6">
+                               { gameMode !== GameMode.PVO && <button onClick={withSound(() => startGame(gameMode, difficulty, players[1].name, aiType, configuredTurnTime, startPosition, initialWalls))} className="w-full bg-green-500 text-white font-bold py-3 rounded-lg button-glow button-glow-green">Play Again</button>}
+                                <button onClick={withSound(returnToMenu)} className="w-full bg-fuchsia-600 text-white font-bold py-3 rounded-lg button-glow button-glow-purple">Main Menu</button>
+                            </div>
+                        </div>
+                    </Modal>
+                    </>
+                )}
+                {gameState === GameState.ONLINE_WAITING && (
+                    <WaitingForOpponentModal 
+                        gameId={onlineGameId} 
+                        hasTimeout={!!onlineRequestTimeout} 
+                        onCancelSearch={withSound(handleCancelFindMatch)} 
+                        onCancelCreateGame={withSound(handleCancelCreateGame)}
+                    />
+                )}
+                {showRateLimitModal && (
+                     <Modal title="API Limit Reached" onClose={withSound(() => setShowRateLimitModal(false))}>
+                        <div className="text-center space-y-4">
+                            <p className="text-gray-300">You've exceeded the request limit for Gemini. The AI will make a simple move. For an uninterrupted experience, try the offline <span className="font-bold text-white">Local AI</span>.</p>
+                            <button onClick={withSound(() => setShowRateLimitModal(false))} className="w-full bg-cyan-500 text-white font-bold py-3 rounded-lg button-glow button-glow-cyan">OK</button>
+                        </div>
+                    </Modal>
+                )}
+                {showNewGameConfirm && (
+                    <Modal title="Start New Game?" onClose={() => setShowNewGameConfirm(false)}>
+                        <div className="text-center space-y-4">
+                            <p className="text-gray-300">Are you sure? Your current game progress will be lost.</p>
+                            <div className="flex gap-4 mt-6">
+                                <button onClick={withSound(() => setShowNewGameConfirm(false))} className="w-full py-3 rounded-lg font-bold text-white bg-gray-600 hover:bg-gray-700 transition-all">Cancel</button>
+                                <button onClick={withSound(() => { setShowNewGameConfirm(false); returnToMenu(); })} className="w-full py-3 rounded-lg font-bold text-white bg-orange-500 button-glow button-glow-orange">Confirm</button>
+                            </div>
+                        </div>
+                    </Modal>
+                )}
+                {errorToast && (
+                    <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-orange-900/80 border border-orange-500 text-orange-200 px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50 animate-fade-in-down backdrop-blur-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <span className="font-semibold">{errorToast}</span>
+                    </div>
+                )}
+                <style>{`
+                    @keyframes fade-in-down{from{opacity:0;transform:translate(-50%,-20px)}to{opacity:1;transform:translate(-50%,0)}}
+                    .animate-fade-in-down{animation:fade-in-down .5s ease-out forwards}
+
+                    @keyframes celebrate {
+                        0% { transform: translateY(0) scale(1); opacity: 1; }
+                        100% { transform: translateY(-120vh) scale(0.5); opacity: 0; }
+                    }
+                    .animate-celebrate {
+                        animation-name: celebrate;
+                        animation-timing-function: linear;
+                        animation-iteration-count: 1;
+                        animation-fill-mode: forwards;
+                    }
+                    @keyframes swirl {
+                        from { transform: rotate(0deg); }
+                        to { transform: rotate(360deg); }
+                    }
+                    .animate-swirl {
+                        animation: swirl 2s linear infinite;
+                    }
+                `}</style>
+            </main>
+        </>
     );
 };
 
@@ -491,12 +503,27 @@ const WaitingForOpponentModal: React.FC<{
         return () => clearInterval(timerId);
     }, [hasTimeout, timeLeft]);
 
-    const handleCopy = () => {
+    const handleShare = async () => {
         if (!joinUrl) return;
         soundService.play(Sound.UIClick);
-        navigator.clipboard.writeText(joinUrl);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+
+        const shareData = {
+            title: 'Maze Magic Game Invitation',
+            text: "Join my game of Maze Magic! Follow this link to play.",
+            url: joinUrl,
+        };
+
+        if (navigator.share && navigator.canShare(shareData)) {
+            try {
+                await navigator.share(shareData);
+            } catch (error) {
+                console.error('Sharing failed:', error);
+            }
+        } else {
+            navigator.clipboard.writeText(joinUrl);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
     };
 
     const title = gameId ? 'Waiting for Opponent' : 'Finding Match...';
@@ -526,7 +553,7 @@ const WaitingForOpponentModal: React.FC<{
                 {gameId && (
                     <div className="flex items-center space-x-2">
                         <input type="text" readOnly value={joinUrl} className="w-full p-2 rounded-lg bg-black/30 border border-fuchsia-500/50 text-sm" />
-                        <button onClick={handleCopy} className="p-2 rounded-lg bg-cyan-500 text-white font-bold button-glow button-glow-cyan text-sm w-24">{copied ? 'Copied!' : 'Copy'}</button>
+                        <button onClick={handleShare} className="p-2 rounded-lg bg-cyan-500 text-white font-bold button-glow button-glow-cyan text-sm w-24">{copied ? 'Copied!' : 'Share'}</button>
                     </div>
                 )}
                 {hasTimeout && timeLeft > 0 && (
@@ -652,12 +679,12 @@ const OnlineGameSetup: React.FC<{ playerName: string; onCreateGame: Function; on
                   </div>
            </div>
            <div className="space-y-4 pt-4 border-t border-fuchsia-500/30">
-               <button onClick={() => props.onFindMatch(duration, startPos, walls)} className="w-full bg-fuchsia-500 text-white font-bold py-3 rounded-lg button-glow button-glow-purple">Find Random Match</button>
+               <button onClick={() => props.onFindMatch(props.playerName, duration, startPos, walls)} className="w-full bg-fuchsia-500 text-white font-bold py-3 rounded-lg button-glow button-glow-purple">Find Random Match</button>
                <div className="text-center text-gray-400">OR</div>
-               <button onClick={() => props.onCreateGame(duration, startPos, walls)} className="w-full bg-green-500 text-white font-bold py-3 rounded-lg button-glow button-glow-green">Create Private Game</button>
+               <button onClick={() => props.onCreateGame(props.playerName, duration, startPos, walls)} className="w-full bg-green-500 text-white font-bold py-3 rounded-lg button-glow button-glow-green">Create Private Game</button>
                <div className="flex items-center space-x-2">
                    <input type="text" value={joinGameId} onChange={(e) => setJoinGameId(e.target.value)} className="w-full p-3 rounded-lg bg-black/30 border border-fuchsia-500/50" placeholder="Paste Game ID" />
-                   <button onClick={() => props.onJoinGame(joinGameId)} disabled={!joinGameId} className="p-3 rounded-lg bg-cyan-500 text-white font-bold button-glow button-glow-cyan disabled:opacity-50">Join</button>
+                   <button onClick={() => props.onJoinGame(joinGameId, props.playerName)} disabled={!joinGameId} className="p-3 rounded-lg bg-cyan-500 text-white font-bold button-glow button-glow-cyan disabled:opacity-50">Join</button>
                </div>
            </div>
        </div>

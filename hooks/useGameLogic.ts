@@ -138,9 +138,25 @@ const useGameLogic = () => {
     resetGameState();
     let p2Name = 'Player 2';
     if (mode === GameMode.PVC) {
-        const aiName = selectedAiType === AiType.GEMINI ? 'Gemini AI' : 'Local AI';
-        const difficultyString = selectedDifficulty.charAt(0) + selectedDifficulty.slice(1).toLowerCase();
-        p2Name = `${aiName} (${difficultyString})`;
+        if (selectedAiType === AiType.GEMINI) {
+            const difficultyString = selectedDifficulty.charAt(0) + selectedDifficulty.slice(1).toLowerCase();
+            p2Name = `Gemini AI (${difficultyString})`;
+        } else {
+            switch (selectedDifficulty) {
+                case Difficulty.EASY:
+                    p2Name = 'AI (Easy)';
+                    break;
+                case Difficulty.MEDIUM:
+                    p2Name = 'AI (Medium)';
+                    break;
+                case Difficulty.HARD:
+                    p2Name = 'AI (Hard)';
+                    break;
+                default:
+                    p2Name = 'AI'; // Fallback
+                    break;
+            }
+        }
     }
     setInitialWalls(wallsCount);
 
@@ -677,14 +693,25 @@ const useGameLogic = () => {
   }, [gameState, gameMode, currentPlayerId, onlinePlayerId, winner]);
 
   // --- Create derived state for UI display based on perspective ---
-  const displayPlayers = useMemo(() => {
+  // Fix: Explicitly type the return value of useMemo to prevent type widening of player IDs.
+  const displayPlayers = useMemo<{ [key: number]: Player }>(() => {
     if (!isPlayer2Perspective || !players[1] || !players[2]) {
       return players;
     }
     // For P2, swap player data and transform positions so P2 is at the bottom
     return {
-      1: { ...players[2], position: transformPosition(players[2].position)! },
-      2: { ...players[1], position: transformPosition(players[1].position)! },
+      1: { 
+        ...players[2], 
+        id: 1, // Fix: ensure display player 1 has id 1
+        position: transformPosition(players[2].position)!,
+        goalRow: BOARD_SIZE - 1 - players[2].goalRow, // Transform goal row
+      },
+      2: { 
+        ...players[1],
+        id: 2, // Fix: ensure display player 2 has id 2
+        position: transformPosition(players[1].position)!,
+        goalRow: BOARD_SIZE - 1 - players[1].goalRow, // Transform goal row
+      },
     };
   }, [isPlayer2Perspective, players, transformPosition]);
 
@@ -736,4 +763,4 @@ const useGameLogic = () => {
   };
 };
 
-export default useGameLogic;
+export { useGameLogic };
