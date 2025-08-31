@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gemini-maze-race-cache-v1';
+const CACHE_NAME = 'gemini-maze-race-cache-v2';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -16,7 +16,7 @@ const ASSETS_TO_CACHE = [
     './home-page-background.png'
 ];
 
-// Install event: cache the application shell
+// Install event: cache the application shell and take control immediately
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
@@ -28,9 +28,10 @@ self.addEventListener('install', event => {
                 console.error('Failed to cache app shell:', error);
             })
     );
+    self.skipWaiting();
 });
 
-// Activate event: clean up old caches
+// Activate event: clean up old caches and claim clients
 self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys().then(cacheNames => {
@@ -41,7 +42,7 @@ self.addEventListener('activate', event => {
                         return caches.delete(cacheName);
                     }
                 })
-            );
+            ).then(() => self.clients.claim());
         })
     );
 });
