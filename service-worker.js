@@ -1,18 +1,19 @@
 const CACHE_NAME = 'gemini-maze-race-cache-v1';
 const ASSETS_TO_CACHE = [
-    '/',
-    '/index.html',
-    '/splash.png',
-    '/icons/icon-192x192.png',
-    '/icons/icon-512x512.png',
-    '/sounds/ui-click.mp3',
-    '/sounds/start-game.mp3',
-    '/sounds/move-pawn.mp3',
-    '/sounds/place-wall.mp3',
-    '/sounds/win-game.mp3',
-    '/sounds/lose-game.mp3',
-    '/sounds/timer-tick.mp3',
-    '/sounds/error.mp3'
+    './',
+    './index.html',
+    './splash.png',
+    './icons/icon-192x192.png',
+    './icons/icon-512x512.png',
+    './sounds/ui-click.mp3',
+    './sounds/start-game.mp3',
+    './sounds/move-pawn.mp3',
+    './sounds/place-wall.mp3',
+    './sounds/win-game.mp3',
+    './sounds/lose-game.mp3',
+    './sounds/timer-tick.mp3',
+    './sounds/error.mp3',
+    './home-page-background.png'
 ];
 
 // Install event: cache the application shell
