@@ -144,16 +144,16 @@ const useGameLogic = () => {
         } else {
             switch (selectedDifficulty) {
                 case Difficulty.EASY:
-                    p2Name = 'Apprentice Sentry';
+                    p2Name = 'AI (Easy)';
                     break;
                 case Difficulty.MEDIUM:
-                    p2Name = 'Adept Sentry';
+                    p2Name = 'AI (Medium)';
                     break;
                 case Difficulty.HARD:
-                    p2Name = 'Master Sentry';
+                    p2Name = 'AI (Hard)';
                     break;
                 default:
-                    p2Name = 'Arcane Sentry'; // Fallback
+                    p2Name = 'AI'; // Fallback
                     break;
             }
         }
