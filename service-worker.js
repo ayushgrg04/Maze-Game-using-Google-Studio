@@ -2,6 +2,7 @@ const CACHE_NAME = 'gemini-maze-race-cache-v6';
 const ASSETS_TO_CACHE = [
     './',
     'index.html',
+    'privacy_policy.html',
     'splash.png',
     'icons/icon-192x192.png',
     'icons/icon-512x512.png',
