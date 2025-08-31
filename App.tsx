@@ -491,12 +491,27 @@ const WaitingForOpponentModal: React.FC<{
         return () => clearInterval(timerId);
     }, [hasTimeout, timeLeft]);
 
-    const handleCopy = () => {
+    const handleShare = async () => {
         if (!joinUrl) return;
         soundService.play(Sound.UIClick);
-        navigator.clipboard.writeText(joinUrl);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+
+        const shareData = {
+            title: 'Maze Magic Game Invitation',
+            text: "Join my game of Maze Magic! Follow this link to play.",
+            url: joinUrl,
+        };
+
+        if (navigator.share && navigator.canShare(shareData)) {
+            try {
+                await navigator.share(shareData);
+            } catch (error) {
+                console.error('Sharing failed:', error);
+            }
+        } else {
+            navigator.clipboard.writeText(joinUrl);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
     };
 
     const title = gameId ? 'Waiting for Opponent' : 'Finding Match...';
@@ -526,7 +541,7 @@ const WaitingForOpponentModal: React.FC<{
                 {gameId && (
                     <div className="flex items-center space-x-2">
                         <input type="text" readOnly value={joinUrl} className="w-full p-2 rounded-lg bg-black/30 border border-fuchsia-500/50 text-sm" />
-                        <button onClick={handleCopy} className="p-2 rounded-lg bg-cyan-500 text-white font-bold button-glow button-glow-cyan text-sm w-24">{copied ? 'Copied!' : 'Copy'}</button>
+                        <button onClick={handleShare} className="p-2 rounded-lg bg-cyan-500 text-white font-bold button-glow button-glow-cyan text-sm w-24">{copied ? 'Copied!' : 'Share'}</button>
                     </div>
                 )}
                 {hasTimeout && timeLeft > 0 && (
@@ -652,12 +667,12 @@ const OnlineGameSetup: React.FC<{ playerName: string; onCreateGame: Function; on
                   </div>
            </div>
            <div className="space-y-4 pt-4 border-t border-fuchsia-500/30">
-               <button onClick={() => props.onFindMatch(duration, startPos, walls)} className="w-full bg-fuchsia-500 text-white font-bold py-3 rounded-lg button-glow button-glow-purple">Find Random Match</button>
+               <button onClick={() => props.onFindMatch(props.playerName, duration, startPos, walls)} className="w-full bg-fuchsia-500 text-white font-bold py-3 rounded-lg button-glow button-glow-purple">Find Random Match</button>
                <div className="text-center text-gray-400">OR</div>
-               <button onClick={() => props.onCreateGame(duration, startPos, walls)} className="w-full bg-green-500 text-white font-bold py-3 rounded-lg button-glow button-glow-green">Create Private Game</button>
+               <button onClick={() => props.onCreateGame(props.playerName, duration, startPos, walls)} className="w-full bg-green-500 text-white font-bold py-3 rounded-lg button-glow button-glow-green">Create Private Game</button>
                <div className="flex items-center space-x-2">
                    <input type="text" value={joinGameId} onChange={(e) => setJoinGameId(e.target.value)} className="w-full p-3 rounded-lg bg-black/30 border border-fuchsia-500/50" placeholder="Paste Game ID" />
-                   <button onClick={() => props.onJoinGame(joinGameId)} disabled={!joinGameId} className="p-3 rounded-lg bg-cyan-500 text-white font-bold button-glow button-glow-cyan disabled:opacity-50">Join</button>
+                   <button onClick={() => props.onJoinGame(joinGameId, props.playerName)} disabled={!joinGameId} className="p-3 rounded-lg bg-cyan-500 text-white font-bold button-glow button-glow-cyan disabled:opacity-50">Join</button>
                </div>
            </div>
        </div>
