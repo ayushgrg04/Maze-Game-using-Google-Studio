@@ -138,9 +138,25 @@ const useGameLogic = () => {
     resetGameState();
     let p2Name = 'Player 2';
     if (mode === GameMode.PVC) {
-        const aiName = selectedAiType === AiType.GEMINI ? 'Gemini AI' : 'Local AI';
-        const difficultyString = selectedDifficulty.charAt(0) + selectedDifficulty.slice(1).toLowerCase();
-        p2Name = `${aiName} (${difficultyString})`;
+        if (selectedAiType === AiType.GEMINI) {
+            const difficultyString = selectedDifficulty.charAt(0) + selectedDifficulty.slice(1).toLowerCase();
+            p2Name = `Gemini AI (${difficultyString})`;
+        } else {
+            switch (selectedDifficulty) {
+                case Difficulty.EASY:
+                    p2Name = 'Apprentice Sentry';
+                    break;
+                case Difficulty.MEDIUM:
+                    p2Name = 'Adept Sentry';
+                    break;
+                case Difficulty.HARD:
+                    p2Name = 'Master Sentry';
+                    break;
+                default:
+                    p2Name = 'Arcane Sentry'; // Fallback
+                    break;
+            }
+        }
     }
     setInitialWalls(wallsCount);
 
@@ -747,4 +763,4 @@ const useGameLogic = () => {
   };
 };
 
-export default useGameLogic;
+export { useGameLogic };
