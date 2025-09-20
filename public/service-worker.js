@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gemini-maze-race-cache-v6';
+const CACHE_NAME = 'gemini-maze-race-cache-v7';
 const ASSETS_TO_CACHE = [
     './',
     'index.html',
@@ -14,6 +14,14 @@ const ASSETS_TO_CACHE = [
     'sounds/lose-game.mp3',
     'sounds/timer-tick.mp3',
     'sounds/error.mp3',
+    'sounds/emoji-laugh.mp3',
+    'sounds/emoji-think.mp3',
+    'sounds/emoji-mind-blown.mp3',
+    'sounds/emoji-cool.mp3',
+    'sounds/emoji-wave.mp3',
+    'sounds/emoji-love.mp3',
+    'sounds/emoji-angry.mp3',
+    'sounds/emoji-waiting.mp3',
     'home-page-background.png',
     // Add all source files that will be fetched by the browser
     'index.tsx',

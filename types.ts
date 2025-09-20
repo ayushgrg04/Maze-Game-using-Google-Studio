@@ -77,3 +77,10 @@ export type OnlineGameAction =
   | { type: 'PLACE_WALL'; wall: Omit<Wall, 'playerId'> }
   | { type: 'TIMEOUT' }
   | { type: 'FORFEIT' };
+  
+// Represents a non-game-state event, like sending an emoji
+export type OnlineEmojiEvent = {
+    emoji: string;
+    senderId: 1 | 2;
+    timestamp: number;
+};

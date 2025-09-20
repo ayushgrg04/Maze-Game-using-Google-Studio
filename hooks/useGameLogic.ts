@@ -5,11 +5,22 @@ import getAiMove from '../services/geminiService';
 import getLocalAiMove from '../services/localAiService';
 import { onlineService } from '../services/onlineService';
 import { findShortestPath, getPossibleMoves } from '../utils/pathfinding';
-import type { Player, Position, Wall, AiAction, OnlineGameData, OnlineGameAction } from '../types';
+import type { Player, Position, Wall, AiAction, OnlineGameData, OnlineGameAction, OnlineEmojiEvent } from '../types';
 import { GameState, GameMode, Difficulty, AiType, StartPosition } from '../types';
 import { soundService, Sound } from '../services/soundService';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const emojiSounds: Record<string, Sound> = {
+  '😂': Sound.EmojiLaugh,
+  '🤔': Sound.EmojiThink,
+  '🤯': Sound.EmojiMindBlown,
+  '😎': Sound.EmojiCool,
+  '👋': Sound.EmojiWave,
+  '❤️': Sound.EmojiLove,
+  '😡': Sound.EmojiAngry,
+  '⏳': Sound.EmojiWaiting,
+};
 
 const useGameLogic = () => {
   const [gameState, setGameState] = useState<GameState>(GameState.MENU);
@@ -39,6 +50,7 @@ const useGameLogic = () => {
   const [initialWalls, setInitialWalls] = useState(10);
   const [pendingJoinId, setPendingJoinId] = useState<string | null>(null);
   const [lastStateTimestamp, setLastStateTimestamp] = useState(0);
+  const [travelingEmoji, setTravelingEmoji] = useState<{ emoji: string; fromPlayerId: 1 | 2; key: number } | null>(null);
   const lastStateTimestampRef = useRef(lastStateTimestamp);
 
   useEffect(() => {
@@ -57,6 +69,7 @@ const useGameLogic = () => {
     setApiError(null);
     setGameTime(0);
     setTurnTime(configuredTurnTime);
+    setTravelingEmoji(null);
     
     if(onlineRequestTimeout) clearTimeout(onlineRequestTimeout);
     setOnlineRequestTimeout(null);
@@ -705,6 +718,52 @@ const useGameLogic = () => {
   const displaySelectedPiece = useMemo(() => transformPosition(selectedPiece), [selectedPiece, transformPosition]);
   const displayValidMoves = useMemo(() => validMoves.map(m => transformPosition(m)!), [validMoves, transformPosition]);
 
+  const handleSendEmoji = useCallback((emoji: string, pvpSenderId?: 1 | 2) => {
+    if (gameState !== GameState.PLAYING) return;
+
+    if (emojiSounds[emoji]) {
+        soundService.play(emojiSounds[emoji]);
+    }
+    
+    if (gameMode === GameMode.PVO && onlineGameId && onlinePlayerId) {
+        onlineService.publishEmojiEvent(onlineGameId, emoji, onlinePlayerId);
+        // Optimistically show your own sent emoji
+        setTravelingEmoji({ emoji, fromPlayerId: onlinePlayerId, key: Date.now() });
+
+    } else if (gameMode === GameMode.PVP && pvpSenderId) {
+        setTravelingEmoji({ emoji, fromPlayerId: pvpSenderId, key: Date.now() });
+    }
+  }, [gameState, gameMode, onlineGameId, onlinePlayerId]);
+
+  // Effect for traveling emoji
+  useEffect(() => {
+    if (!travelingEmoji) return;
+    const timer = setTimeout(() => {
+        setTravelingEmoji(null);
+    }, 1500); // match animation duration
+    return () => clearTimeout(timer);
+  }, [travelingEmoji]);
+
+  // Effect for online emoji subscription
+  useEffect(() => {
+    if (gameMode !== GameMode.PVO || !onlineGameId || !onlinePlayerId) return;
+
+    const handleEmojiEvent = (data: OnlineEmojiEvent) => {
+        // Don't show pop-up for emojis you sent yourself
+        if (data.senderId === onlinePlayerId) return;
+
+        if (emojiSounds[data.emoji]) {
+            soundService.play(emojiSounds[data.emoji]);
+        }
+
+        setTravelingEmoji({ emoji: data.emoji, fromPlayerId: data.senderId, key: data.timestamp });
+    };
+
+    const unsubscribe = onlineService.onEmojiEvent(onlineGameId, handleEmojiEvent);
+    return () => unsubscribe();
+
+  }, [gameMode, onlineGameId, onlinePlayerId]);
+
   return {
     gameState, gameMode, difficulty, aiType, 
     currentPlayerId: displayCurrentPlayerId, // Return the transformed ID for the UI
@@ -719,6 +778,7 @@ const useGameLogic = () => {
     initialWalls,
     isMyTurn, // This is now the source of truth for UI interactivity
     pendingJoinId,
+    travelingEmoji,
     setShowRateLimitModal,
     startGame, handleCellClick: handleMove,
     handleWallPreview,
@@ -726,6 +786,7 @@ const useGameLogic = () => {
     togglePlacingWall, returnToMenu,
     handleCreateOnlineGame, handleJoinOnlineGame, handleFindMatch, handleCancelFindMatch, handleCancelCreateGame,
     cancelJoin,
+    handleSendEmoji,
   };
 };
 

@@ -1,5 +1,10 @@
 
 
+
+
+
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameLogic } from './hooks/useGameLogic';
 import GameBoard from './components/GameBoard';
@@ -11,6 +16,75 @@ import { AiChatTooltip } from './components/AiChatTooltip';
 import { GameState, GameMode, Difficulty, Player, AiType, StartPosition, Wall } from './types';
 import { AnimatedMenuBackground } from './components/AnimatedMenuBackground';
 import { soundService, Sound } from './services/soundService';
+
+const EMOJIS = ['😂', '🤔', '🤯', '😎', '👋', '❤️', '😡', '⏳'];
+
+const EmojiPlate: React.FC<{ onSelect: (emoji: string) => void; enabled: boolean; }> = ({ onSelect, enabled }) => {
+  const handleSelect = (emoji: string) => {
+    if (!enabled) return;
+    onSelect(emoji);
+  };
+
+  return (
+    <div className={`flex items-center justify-center gap-1 sm:gap-2 magical-container rounded-full p-1 transition-opacity ${!enabled ? 'opacity-50 ' : ''}`}>
+      {EMOJIS.map(emoji => (
+        <button
+          key={emoji}
+          onClick={() => handleSelect(emoji)}
+          disabled={!enabled}
+          className="text-lg sm:text-2xl p-1 rounded-full hover:bg-white/20 transition-transform hover:scale-125 focus:outline-none focus:ring-2 focus:ring-purple-400 disabled:cursor-not-allowed"
+          aria-label={`Send ${emoji} emoji`}
+        >
+          {emoji}
+        </button>
+      ))}
+    </div>
+  );
+};
+
+const TravelingEmoji: React.FC<{
+    emoji: string;
+    fromPlayerId: 1 | 2;
+    localPlayerId: 1 | 2 | null;
+    gameMode: GameMode;
+}> = ({ emoji, fromPlayerId, localPlayerId, gameMode }) => {
+    
+    let isFromBottom: boolean;
+    if (gameMode === GameMode.PVP) {
+        // In local PvP, Player 1 is always at the bottom, Player 2 is at the top.
+        isFromBottom = fromPlayerId === 1;
+    } else {
+        // In online PvP, the sender's emoji always comes from the bottom of their screen.
+        isFromBottom = fromPlayerId === localPlayerId;
+    }
+
+    return (
+        <div
+          className="fixed text-6xl pointer-events-none z-50 animate-emoji-travel"
+          style={{
+            left: '50%',
+            bottom: isFromBottom ? '15%' : 'auto',
+            top: isFromBottom ? 'auto' : '15%',
+          }}
+        >
+          {emoji}
+          <style>{`
+            @keyframes emoji-travel-from-bottom {
+              0% { transform: translate(-50%, 0) scale(1.5); opacity: 1; }
+              100% { transform: translate(-50%, -65vh) scale(0.5); opacity: 0; }
+            }
+            @keyframes emoji-travel-from-top {
+              0% { transform: translate(-50%, 0) scale(1.5); opacity: 1; }
+              100% { transform: translate(-50%, 65vh) scale(0.5); opacity: 0; }
+            }
+            .animate-emoji-travel {
+              animation: ${isFromBottom ? 'emoji-travel-from-bottom' : 'emoji-travel-from-top'} 1.5s cubic-bezier(0.5, -0.5, 0.5, 1.5) forwards;
+              text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            }
+          `}</style>
+        </div>
+    );
+};
 
 const TurnIndicator: React.FC<{ player: Player; size?: 'sm' | 'md' }> = ({ player, size = 'md' }) => {
     const containerClasses = size === 'sm' ? 'px-3 py-1 space-x-2' : 'px-4 py-2 space-x-3';
@@ -175,10 +249,10 @@ const App: React.FC = () => {
         selectedPiece, validMoves, isPlacingWall, aiThinking, lastAiAction, apiError, gameTime, turnTime,
         showRateLimitModal, wallPlacementError, setShowRateLimitModal, configuredTurnTime, startPosition,
         wallPreview, onlineGameId, onlinePlayerId, onlineRequestTimeout, initialWalls,
-        isMyTurn, pendingJoinId,
+        isMyTurn, pendingJoinId, travelingEmoji,
         startGame, handleCellClick, handleWallPreview, confirmWallPlacement, cancelWallPlacement,
         togglePlacingWall, returnToMenu, handleCreateOnlineGame, handleJoinOnlineGame, handleFindMatch, handleCancelFindMatch, handleCancelCreateGame,
-        cancelJoin,
+        cancelJoin, handleSendEmoji,
     } = useGameLogic();
 
     type MenuScreen = 'main' | 'local_setup' | 'online_setup';
@@ -213,6 +287,8 @@ const App: React.FC = () => {
     }, [turnTime, isMyTurn]);
     
     useEffect(() => {
+        soundService.init(); // Initialize the sound service and preload sounds
+
         const splashScreen = document.getElementById('splash-screen');
         if (splashScreen) {
             splashScreen.classList.add('fade-out');
@@ -478,8 +554,10 @@ const App: React.FC = () => {
                     <div className="flex-1 flex justify-start">
                         {currentPlayer?.id === player1?.id && <TurnTimer currentTime={turnTime} initialTime={configuredTurnTime} player={currentPlayer} isActive={true} />}
                     </div>
-                    <div className="flex-1" />
-                    <div className="flex-1 flex justify-end">
+                    <div className="flex-shrink-0 px-2">
+                        {gameMode === GameMode.PVO && <EmojiPlate onSelect={(emoji) => handleSendEmoji(emoji)} enabled={true} />}
+                    </div>
+                    <div className="flex-1 flex justify-end relative">
                         {player1 && <PlayerInfo player={player1} />}
                     </div>
                 </div>
@@ -509,6 +587,7 @@ const App: React.FC = () => {
                 <div className="space-y-2">
                     <div className="flex justify-between items-center w-full">
                         <PlayerInfo player={player2} reverse size="sm" />
+                        <EmojiPlate onSelect={(emoji) => handleSendEmoji(emoji, 2)} enabled={true} />
                         <TurnTimer currentTime={turnTime} initialTime={configuredTurnTime} player={player2} isActive={currentPlayerId === 2} size="sm" />
                     </div>
                      <ActionButtons
@@ -554,6 +633,7 @@ const App: React.FC = () => {
                  <div className="space-y-2">
                     <div className="flex justify-between items-center w-full">
                         <TurnTimer currentTime={turnTime} initialTime={configuredTurnTime} player={player1} isActive={currentPlayerId === 1} size="sm" />
+                        <EmojiPlate onSelect={(emoji) => handleSendEmoji(emoji, 1)} enabled={true} />
                         <PlayerInfo player={player1} size="sm" />
                     </div>
                     <ActionButtons
@@ -577,6 +657,10 @@ const App: React.FC = () => {
             <main className={`h-screen max-h-[100dvh] w-full grid grid-rows-[auto_1fr_auto] p-2 sm:p-4 bg-gradient-to-b from-[var(--dark-bg-start)] to-[var(--dark-bg-end)] overflow-hidden`}>
                 {isPvpMode ? renderPvpLayout() : renderDefaultLayout()}
                 
+                {(gameMode === GameMode.PVP || gameMode === GameMode.PVO) && travelingEmoji && (
+                    <TravelingEmoji key={travelingEmoji.key} emoji={travelingEmoji.emoji} fromPlayerId={travelingEmoji.fromPlayerId} localPlayerId={onlinePlayerId} gameMode={gameMode} />
+                )}
+
                 {gameState === GameState.GAME_OVER && winner && (
                     <>
                     {winner.id === (onlinePlayerId ?? 1) && <Celebration />}
