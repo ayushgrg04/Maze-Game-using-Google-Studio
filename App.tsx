@@ -281,7 +281,7 @@ const App: React.FC = () => {
     const [showAboutModal, setShowAboutModal] = useState(false);
     const [privacyPolicyContent, setPrivacyPolicyContent] = useState('');
     const [showComingSoonModal, setShowComingSoonModal] = useState(false);
-    const [playerName, setPlayerName] = useState(() => sessionStorage.getItem('playerName') || 'Player 1');
+    const [playerName, setPlayerName] = useState(() => localStorage.getItem('playerName') || 'Player 1');
     const [onlineFlow, setOnlineFlow] = useState<'create' | 'find' | null>(null);
 
     const gameBoardSizerRef = useRef<HTMLDivElement>(null);
@@ -289,7 +289,7 @@ const App: React.FC = () => {
 
     const handlePlayerNameChange = (name: string) => {
         setPlayerName(name);
-        sessionStorage.setItem('playerName', name);
+        localStorage.setItem('playerName', name);
     };
 
     // Effect for timer tick sound
