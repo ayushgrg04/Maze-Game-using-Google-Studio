@@ -183,8 +183,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
         }}
         aria-label={`Cell ${r}, ${c}`}
       >
-        {isPlayer1Here && playerPiece(players[1], isSelected && players[1].id === currentPlayerId)}
-        {isPlayer2Here && playerPiece(players[2], isSelected && players[2].id === currentPlayerId)}
+        {isPlayer1Here && playerPiece(players[1], isSelected && 1 === currentPlayerId)}
+        {isPlayer2Here && playerPiece(players[2], isSelected && 2 === currentPlayerId)}
         {isValidMove && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div 

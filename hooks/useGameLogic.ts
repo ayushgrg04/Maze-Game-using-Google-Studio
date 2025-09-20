@@ -683,24 +683,22 @@ const useGameLogic = () => {
   }, [gameState, gameMode, currentPlayerId, onlinePlayerId, winner]);
 
   // --- Create derived state for UI display based on perspective ---
-  // Fix: Explicitly type the return value of useMemo to prevent type widening of player IDs.
   const displayPlayers = useMemo<{ [key: number]: Player }>(() => {
     if (!isPlayer2Perspective || !players[1] || !players[2]) {
       return players;
     }
-    // For P2, swap player data and transform positions so P2 is at the bottom
+    // For P2, swap player data and transform positions so P2 is at the bottom.
+    // The player's original ID is preserved for display on the pawn.
     return {
-      1: { 
-        ...players[2], 
-        id: 1, // Fix: ensure display player 1 has id 1
+      1: { // The player at the bottom of the screen (from P2's perspective, this is P2)
+        ...players[2], // real player 2 data, includes id: 2
         position: transformPosition(players[2].position)!,
-        goalRow: BOARD_SIZE - 1 - players[2].goalRow, // Transform goal row
+        goalRow: BOARD_SIZE - 1 - players[2].goalRow,
       },
-      2: { 
-        ...players[1],
-        id: 2, // Fix: ensure display player 2 has id 2
+      2: { // The player at the top of the screen (from P2's perspective, this is P1)
+        ...players[1], // real player 1 data, includes id: 1
         position: transformPosition(players[1].position)!,
-        goalRow: BOARD_SIZE - 1 - players[1].goalRow, // Transform goal row
+        goalRow: BOARD_SIZE - 1 - players[1].goalRow,
       },
     };
   }, [isPlayer2Perspective, players, transformPosition]);

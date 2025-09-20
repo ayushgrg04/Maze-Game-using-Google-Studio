@@ -467,7 +467,10 @@ const App: React.FC = () => {
                         <div className="text-center space-y-6">
                             <div className="space-y-1">
                                 <p className="text-lg text-gray-300">Developed by</p>
-                                <p className="text-3xl font-semibold tracking-wider text-fuchsia-400" style={{fontFamily: "Garamond, 'Times New Roman', serif"}}>Onetechzilla (Ayush Garg)</p>
+                                <div>
+                                    <p className="text-3xl font-semibold tracking-wider text-fuchsia-400" style={{fontFamily: "Garamond, 'Times New Roman', serif"}}>Onetechzilla</p>
+                                    <p className="text-xl font-semibold tracking-wider text-fuchsia-400" style={{fontFamily: "Garamond, 'Times New Roman', serif"}}>(Ayush Garg)</p>
+                                </div>
                             </div>
                             <div className="space-y-1">
                                 <p className="text-lg text-gray-300">Contact</p>
