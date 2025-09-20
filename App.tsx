@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameLogic } from './hooks/useGameLogic';
 import GameBoard from './components/GameBoard';
@@ -1117,7 +1118,7 @@ const LocalGameSetup: React.FC<{ playerName: string; onStartGame: Function; onBa
     return (
       <div className="space-y-4 animate-fade-in-down">
           <BackButton onClick={props.onBack} />
-          <h2 className="text-2xl font-bold text-center text-white pt-8">Local Game Setup</h2>
+          <h2 className="text-2xl font-bold text-center text-white pt-8">Offline Game Setup</h2>
           
           <div className="flex gap-4">
               <SetupButton active={mode === GameMode.PVP} onClick={withSound(() => setMode(GameMode.PVP))} color="cyan">Player vs Player</SetupButton>
