@@ -7,6 +7,7 @@ export enum Sound {
   TimerTick = 'timer-tick',
   UIClick = 'ui-click',
   Error = 'error',
+  OnlineWaiting = 'online-waiting',
   // Emojis
   EmojiLaugh = 'emoji-laugh',
   EmojiThink = 'emoji-think',
@@ -29,6 +30,7 @@ const soundFiles: Record<Sound, string> = {
   [Sound.LoseGame]: 'sounds/lose-game.mp3',
   [Sound.TimerTick]: 'sounds/timer-tick.mp3',
   [Sound.Error]: 'sounds/error.mp3',
+  [Sound.OnlineWaiting]: 'sounds/online-waiting.mp3',
   [Sound.EmojiLaugh]: 'sounds/emoji-laugh.mp3',
   [Sound.EmojiThink]: 'sounds/emoji-think.mp3',
   [Sound.EmojiMindBlown]: 'sounds/emoji-mind-blown.mp3',

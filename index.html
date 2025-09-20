@@ -113,6 +113,13 @@
           filter: brightness(1.2);
         }
       }
+       @keyframes swirl {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+      }
+      .animate-swirl {
+          animation: swirl 2s linear infinite;
+      }
     </style>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script type="importmap">

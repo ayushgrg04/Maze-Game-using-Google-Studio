@@ -14,6 +14,7 @@ const ASSETS_TO_CACHE = [
     'sounds/lose-game.mp3',
     'sounds/timer-tick.mp3',
     'sounds/error.mp3',
+    'sounds/online-waiting.mp3',
     'sounds/emoji-laugh.mp3',
     'sounds/emoji-think.mp3',
     'sounds/emoji-mind-blown.mp3',

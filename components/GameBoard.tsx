@@ -191,7 +191,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
               className="w-1/3 h-1/3 rounded-full animate-pulse"
               style={{ 
                 backgroundColor: currentPlayerColor || '#60a5fa',
-                boxShadow: `0 0 8px ${currentPlayerColor}`
+                boxShadow: `0 0 8px ${currentPlayerColor || '#60a5fa'}`
               }}
             ></div>
           </div>

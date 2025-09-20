@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameLogic } from './hooks/useGameLogic';
 import GameBoard from './components/GameBoard';
@@ -180,7 +179,7 @@ const MuteButton: React.FC<{ isMuted: boolean; onClick: () => void; }> = ({ isMu
 const ActionButtons: React.FC<{
     isMyTurn: boolean;
     isPlacingWall: boolean;
-    currentPlayer: Player;
+    currentPlayer: Player | undefined;
     wallPreview: Omit<Wall, 'playerId'> | null;
     onTogglePlacingWall: () => void;
     secondaryAction?: {
@@ -193,6 +192,23 @@ const ActionButtons: React.FC<{
     onCancelWall: () => void;
     buttonHeightClass?: string;
 }> = ({ isMyTurn, isPlacingWall, currentPlayer, wallPreview, onTogglePlacingWall, secondaryAction, onConfirmWall, onCancelWall, buttonHeightClass = 'h-14' }) => {
+    
+    if (!currentPlayer) {
+        return (
+            <div className={`relative w-full mt-2 ${buttonHeightClass}`}>
+                <div className="absolute inset-0 flex w-full items-center space-x-4">
+                    <button disabled className="w-full h-full rounded-lg font-bold text-white bg-gray-600 opacity-50 cursor-not-allowed">
+                        Place Wall
+                    </button>
+                    {secondaryAction && (
+                         <button disabled className="w-full h-full rounded-lg font-bold text-white bg-gray-600 opacity-50 cursor-not-allowed">
+                            {secondaryAction.label}
+                        </button>
+                    )}
+                </div>
+            </div>
+        );
+    }
     
     const wallButtonColorClass = currentPlayer.color === '#ec4899' ? 'bg-pink-500 button-glow-pink' : 'bg-cyan-500 button-glow-cyan';
     const finalWallButtonClass = isPlacingWall ? 'bg-orange-500 button-glow-orange' : wallButtonColorClass;
@@ -207,7 +223,7 @@ const ActionButtons: React.FC<{
             >
                 <button 
                     onClick={onTogglePlacingWall} 
-                    disabled={!currentPlayer || currentPlayer.wallsLeft === 0 || !isMyTurn} 
+                    disabled={currentPlayer.wallsLeft === 0 || !isMyTurn} 
                     className={`w-full h-full rounded-lg font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed button-glow ${finalWallButtonClass}`}
                 >
                     {isPlacingWall ? 'Cancel' : 'Place Wall'}
@@ -247,10 +263,10 @@ const App: React.FC = () => {
         selectedPiece, validMoves, isPlacingWall, aiThinking, lastAiAction, apiError, gameTime, turnTime,
         showRateLimitModal, wallPlacementError, setShowRateLimitModal, configuredTurnTime, startPosition,
         wallPreview, onlineGameId, onlinePlayerId, onlineRequestTimeout, initialWalls,
-        isMyTurn, pendingJoinId, travelingEmoji,
+        isMyTurn, pendingJoinId, travelingEmoji, isJoiningGame,
         startGame, handleCellClick, handleWallPreview, confirmWallPlacement, cancelWallPlacement,
         togglePlacingWall, returnToMenu, handleCreateOnlineGame, handleJoinOnlineGame, handleFindMatch, handleCancelFindMatch, handleCancelCreateGame,
-        cancelJoin, handleSendEmoji, clearWallPlacementError,
+        cancelJoin, cancelJoinAttempt, handleSendEmoji, clearWallPlacementError, clearApiError,
     } = useGameLogic();
 
     type MenuScreen = 'main' | 'local_setup' | 'online_setup';
@@ -266,6 +282,7 @@ const App: React.FC = () => {
     const [privacyPolicyContent, setPrivacyPolicyContent] = useState('');
     const [showComingSoonModal, setShowComingSoonModal] = useState(false);
     const [playerName, setPlayerName] = useState(() => sessionStorage.getItem('playerName') || 'Player 1');
+    const [onlineFlow, setOnlineFlow] = useState<'create' | 'find' | null>(null);
 
     const gameBoardSizerRef = useRef<HTMLDivElement>(null);
     const [boardPixelSize, setBoardPixelSize] = useState(0);
@@ -355,24 +372,24 @@ const App: React.FC = () => {
     }, [lastAiAction]);
 
     useEffect(() => {
+        let timer: number | undefined;
         if (wallPlacementError) {
             soundService.play(Sound.Error);
             setErrorToast(wallPlacementError);
-            const timer = setTimeout(() => {
-                // This will trigger a re-render where wallPlacementError is null,
-                // which will then cause the toast to be hidden by the `else` block.
+            timer = window.setTimeout(() => {
                 clearWallPlacementError();
-            }, 3000); // 3 seconds
-            return () => clearTimeout(timer);
+            }, 3000);
         } else if (apiError) {
-            // Handle apiError separately without auto-clearing
             soundService.play(Sound.Error);
             setErrorToast(apiError);
+            timer = window.setTimeout(() => {
+                clearApiError();
+            }, 3000);
         } else {
-            // No errors, so hide the toast
             setErrorToast(null);
         }
-    }, [apiError, wallPlacementError, clearWallPlacementError]);
+        return () => clearTimeout(timer);
+    }, [apiError, wallPlacementError, clearWallPlacementError, clearApiError]);
     
     const handleToggleMute = () => {
         soundService.toggleMute();
@@ -411,9 +428,15 @@ const App: React.FC = () => {
                 return (
                     <OnlineGameSetup
                         playerName={playerName}
-                        onCreateGame={(...args) => withSound(handleCreateOnlineGame)(...args)}
+                        onCreateGame={(...args) => {
+                            setOnlineFlow('create');
+                            withSound(handleCreateOnlineGame)(...args);
+                        }}
                         onJoinGame={(...args) => withSound(handleJoinOnlineGame)(...args)}
-                        onFindMatch={(...args) => withSound(handleFindMatch)(...args)}
+                        onFindMatch={(...args) => {
+                            setOnlineFlow('find');
+                            withSound(handleFindMatch)(...args);
+                        }}
                         onBack={withSound(() => setMenuScreen('main'))}
                     />
                 );
@@ -421,7 +444,7 @@ const App: React.FC = () => {
     }
     
     if (gameState === GameState.MENU) {
-        if (pendingJoinId) {
+        if (pendingJoinId && !isJoiningGame) {
             return (
                 <JoinGamePrompt
                     gameId={pendingJoinId}
@@ -438,6 +461,39 @@ const App: React.FC = () => {
             <>
                 <MuteButton isMuted={isMuted} onClick={withSound(handleToggleMute)} />
                 <AnimatedMenuBackground />
+
+                {errorToast && (
+                    <div className="fixed top-4 left-1/2 bg-orange-900/80 border border-orange-500 text-orange-200 px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50 backdrop-blur-sm animate-fade-in-down">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <span className="font-semibold">{errorToast}</span>
+                    </div>
+                )}
+
+                {isJoiningGame && (
+                    <Modal title="Joining Game..." onClose={withSound(cancelJoinAttempt)}>
+                        <div className="text-center space-y-4">
+                             <div className="w-24 h-24 mx-auto">
+                                <svg viewBox="0 0 100 100" className="animate-swirl">
+                                    <defs>
+                                        <linearGradient id="swirl-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" stopColor="var(--glow-cyan)" />
+                                            <stop offset="100%" stopColor="var(--glow-purple)" />
+                                        </linearGradient>
+                                    </defs>
+                                    <path d="M 50,50 m -40,0 a 40,40 0 1,0 80,0 a 40,40 0 1,0 -80,0" fill="none" stroke="url(#swirl-gradient)" strokeWidth="6" strokeLinecap="round" strokeDasharray="150 251.2" />
+                                    <path d="M 50,50 m -25,0 a 25,25 0 1,0 50,0 a 25,25 0 1,0 -50,0" fill="none" stroke="url(#swirl-gradient)" strokeWidth="4" strokeLinecap="round" strokeDasharray="80 157" strokeDashoffset="50" />
+                                </svg>
+                            </div>
+                            <p className="text-gray-300">Connecting to the game session...</p>
+                            <button 
+                                onClick={withSound(cancelJoinAttempt)} 
+                                className="w-full mt-4 py-2 rounded-lg font-bold text-white bg-orange-500 button-glow button-glow-orange"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </Modal>
+                )}
 
                 {showHelp && <HelpModal onClose={withSound(() => setShowHelp(false))} />}
                 
@@ -497,6 +553,21 @@ const App: React.FC = () => {
                     </div>
                 </div>
             </>
+        );
+    }
+    
+    if (gameState === GameState.ONLINE_WAITING) {
+        return (
+            <div className="fixed inset-0 bg-gradient-to-b from-[var(--dark-bg-start)] to-[var(--dark-bg-end)] flex items-center justify-center p-4">
+                <MuteButton isMuted={isMuted} onClick={withSound(handleToggleMute)} />
+                <WaitingForOpponentModal 
+                    gameId={onlineGameId} 
+                    hasTimeout={!!onlineRequestTimeout} 
+                    mode={onlineFlow}
+                    onCancelSearch={withSound(handleCancelFindMatch)} 
+                    onCancelCreateGame={withSound(handleCancelCreateGame)}
+                />
+            </div>
         );
     }
     
@@ -673,6 +744,32 @@ const App: React.FC = () => {
                     <TravelingEmoji key={travelingEmoji.key} emoji={travelingEmoji.emoji} fromPlayerId={travelingEmoji.fromPlayerId} localPlayerId={onlinePlayerId} gameMode={gameMode} />
                 )}
 
+                {isJoiningGame && (
+                    <Modal title="Joining Game..." onClose={withSound(cancelJoinAttempt)}>
+                        <div className="text-center space-y-4">
+                             <div className="w-24 h-24 mx-auto">
+                                <svg viewBox="0 0 100 100" className="animate-swirl">
+                                    <defs>
+                                        <linearGradient id="swirl-gradient-2" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" stopColor="var(--glow-cyan)" />
+                                            <stop offset="100%" stopColor="var(--glow-purple)" />
+                                        </linearGradient>
+                                    </defs>
+                                    <path d="M 50,50 m -40,0 a 40,40 0 1,0 80,0 a 40,40 0 1,0 -80,0" fill="none" stroke="url(#swirl-gradient-2)" strokeWidth="6" strokeLinecap="round" strokeDasharray="150 251.2" />
+                                    <path d="M 50,50 m -25,0 a 25,25 0 1,0 50,0 a 25,25 0 1,0 -50,0" fill="none" stroke="url(#swirl-gradient-2)" strokeWidth="4" strokeLinecap="round" strokeDasharray="80 157" strokeDashoffset="50" />
+                                </svg>
+                            </div>
+                            <p className="text-gray-300">Connecting to the game session...</p>
+                            <button 
+                                onClick={withSound(cancelJoinAttempt)} 
+                                className="w-full mt-4 py-2 rounded-lg font-bold text-white bg-orange-500 button-glow button-glow-orange"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </Modal>
+                )}
+
                 {gameState === GameState.GAME_OVER && winner && (
                     <>
                     {winner.id === (onlinePlayerId ?? 1) && <Celebration />}
@@ -705,14 +802,7 @@ const App: React.FC = () => {
                     </Modal>
                     </>
                 )}
-                {gameState === GameState.ONLINE_WAITING && (
-                    <WaitingForOpponentModal 
-                        gameId={onlineGameId} 
-                        hasTimeout={!!onlineRequestTimeout} 
-                        onCancelSearch={withSound(handleCancelFindMatch)} 
-                        onCancelCreateGame={withSound(handleCancelCreateGame)}
-                    />
-                )}
+
                 {showRateLimitModal && (
                      <Modal title="API Limit Reached" onClose={withSound(() => setShowRateLimitModal(false))}>
                         <div className="text-center space-y-4">
@@ -766,13 +856,6 @@ const App: React.FC = () => {
                         animation-timing-function: linear;
                         animation-iteration-count: 1;
                         animation-fill-mode: forwards;
-                    }
-                    @keyframes swirl {
-                        from { transform: rotate(0deg); }
-                        to { transform: rotate(360deg); }
-                    }
-                    .animate-swirl {
-                        animation: swirl 2s linear infinite;
                     }
                     .privacy-policy-content section:not(:last-child) {
                         padding-bottom: 1.5rem;
@@ -856,16 +939,31 @@ const MainMenu: React.FC<{
 };
 
 const WaitingForOpponentModal: React.FC<{
-    gameId: string | null; 
+    gameId: string | null;
     hasTimeout: boolean;
+    mode: 'create' | 'find' | null;
     onCancelSearch?: () => void;
     onCancelCreateGame?: () => void;
-}> = ({ gameId, hasTimeout, onCancelSearch, onCancelCreateGame }) => {
-    const [copied, setCopied] = useState(false);
-    const isFindingMatch = !gameId && hasTimeout;
+}> = ({ gameId, hasTimeout, mode, onCancelSearch, onCancelCreateGame }) => {
+    const [linkCopied, setLinkCopied] = useState(false);
+    const isFindingMatch = mode === 'find';
     const initialTime = isFindingMatch ? 3 * 60 : 5 * 60;
     const [timeLeft, setTimeLeft] = useState(initialTime);
-    const joinUrl = gameId ? `${window.location.origin}${window.location.pathname}?join=${gameId}` : '';
+
+    // Use document.baseURI for a more robust URL in environments that might use blob URLs.
+    const baseUrl = (document.baseURI || window.location.href).split('?')[0].split('#')[0];
+    const joinUrl = gameId ? `${baseUrl}?join=${gameId}` : '';
+
+    useEffect(() => {
+        soundService.play(Sound.OnlineWaiting);
+        const intervalId = setInterval(() => {
+            soundService.play(Sound.OnlineWaiting);
+        }, 5000); // sound file is 5 seconds long
+
+        return () => {
+            clearInterval(intervalId);
+        };
+    }, []);
 
     useEffect(() => {
         if (!hasTimeout || timeLeft <= 0) return;
@@ -875,30 +973,46 @@ const WaitingForOpponentModal: React.FC<{
         return () => clearInterval(timerId);
     }, [hasTimeout, timeLeft]);
 
+    const handleCopy = (text: string) => {
+        navigator.clipboard.writeText(text).then(() => {
+            setLinkCopied(true);
+            setTimeout(() => setLinkCopied(false), 2000);
+        }).catch(err => {
+            console.error("Could not copy text: ", err);
+        });
+    };
+
     const handleShare = async () => {
-        if (!joinUrl) return;
+        if (!joinUrl || !gameId) return;
         soundService.play(Sound.UIClick);
 
         const shareData = {
             title: 'Maze Magic Game Invitation',
-            text: "Join my game of Maze Magic! Follow this link to play.",
+            text: `Let's play Maze Magic! Join my game with this link.`,
             url: joinUrl,
         };
 
-        if (navigator.share && navigator.canShare(shareData)) {
-            try {
+        try {
+            if (navigator.share) {
                 await navigator.share(shareData);
-            } catch (error) {
-                console.error('Sharing failed:', error);
+            } else {
+                handleCopy(joinUrl);
             }
-        } else {
-            navigator.clipboard.writeText(joinUrl);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
+        } catch (error) {
+            // Don't fall back to copy if the user cancels the share dialog.
+            if (error instanceof Error && error.name !== 'AbortError') {
+                console.error('Sharing failed, falling back to copy:', error);
+                handleCopy(joinUrl);
+            }
         }
     };
 
-    const title = gameId ? 'Waiting for Opponent' : 'Finding Match...';
+    let title = '';
+    if (mode === 'create') {
+        title = gameId ? 'Waiting for Opponent' : 'Creating Private Match...';
+    } else { // mode === 'find'
+        title = 'Finding Match...';
+    }
     
     return (
         <Modal title={title}>
@@ -922,10 +1036,30 @@ const WaitingForOpponentModal: React.FC<{
                     <p className="text-gray-300">Share this link with a friend to invite them.</p>
                 )}
 
-                {gameId && (
-                    <div className="flex items-center space-x-2">
-                        <input type="text" readOnly value={joinUrl} className="w-full p-2 rounded-lg bg-black/30 border border-fuchsia-500/50 text-sm" />
-                        <button onClick={handleShare} className="p-2 rounded-lg bg-cyan-500 text-white font-bold button-glow button-glow-cyan text-sm w-24">{copied ? 'Copied!' : 'Share'}</button>
+                {gameId && !isFindingMatch && (
+                    <div className="pt-2">
+                        <div className="flex items-center space-x-2">
+                            <input
+                                type="text"
+                                readOnly
+                                value={joinUrl}
+                                className="flex-grow p-2 rounded-lg bg-black/30 border border-fuchsia-500/50 text-sm text-gray-300"
+                                aria-label="Game invite link"
+                            />
+                            <button
+                                onClick={handleShare}
+                                className="flex-shrink-0 px-3 py-2 rounded-lg bg-pink-500 text-white font-bold button-glow button-glow-pink text-sm flex items-center gap-2"
+                                aria-label={linkCopied ? "Link copied" : "Share game invite"}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                  <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
+                                </svg>
+                                <span>{linkCopied ? 'Copied!' : 'Share'}</span>
+                            </button>
+                        </div>
+                         <p className="text-xs text-gray-400 mt-2 text-left">
+                           {navigator.share ? "Click Share for invite options." : "Share button not supported, link will be copied."}
+                        </p>
                     </div>
                 )}
                 {hasTimeout && timeLeft > 0 && (
@@ -933,7 +1067,7 @@ const WaitingForOpponentModal: React.FC<{
                         {isFindingMatch ? 'Search will time out in' : 'Game will expire in'}: <span className="font-bold">{formatTime(timeLeft)}</span>
                     </p>
                 )}
-                 {(isFindingMatch && onCancelSearch || gameId && onCancelCreateGame) && (
+                 {(isFindingMatch && onCancelSearch || mode === 'create' && onCancelCreateGame) && (
                     <button 
                         onClick={isFindingMatch ? onCancelSearch : onCancelCreateGame} 
                         className="w-full mt-2 py-2 rounded-lg font-bold text-white bg-orange-500 button-glow button-glow-orange"
@@ -943,8 +1077,8 @@ const WaitingForOpponentModal: React.FC<{
                 )}
             </div>
         </Modal>
-    )
-}
+    );
+};
 
 const SetupButton: React.FC<{active: boolean, onClick: ()=>void, children: React.ReactNode, color: 'cyan'|'pink'|'fuchsia'|'dark'}> = ({active, onClick, children, color}) => {
     const colorClasses = {
@@ -1038,7 +1172,7 @@ const LocalGameSetup: React.FC<{ playerName: string; onStartGame: Function; onBa
     );
 }
 
-const OnlineGameSetup: React.FC<{ playerName: string; onCreateGame: Function; onJoinGame: Function; onFindMatch: Function; onBack: () => void; }> = (props) => {
+const OnlineGameSetup: React.FC<{ playerName: string; onCreateGame: (...args: any[]) => void; onJoinGame: (...args: any[]) => void; onFindMatch: (...args: any[]) => void; onBack: () => void; }> = (props) => {
     const [joinGameId, setJoinGameId] = useState('');
     const [startPos, setStartPos] = useState<StartPosition>(StartPosition.CENTER);
     const [duration, setDuration] = useState(60);

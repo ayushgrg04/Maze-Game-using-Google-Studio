@@ -181,7 +181,7 @@ class OnlineGameService {
                 client.removeListener('message', messageHandler);
                 client.unsubscribe(topic);
                 resolve(null);
-            }, 8000); // 8-second timeout
+            }, 30000); // 30-second timeout
 
             const messageHandler = (t: string, payload: Uint8Array) => {
                 if (t === topic) {
