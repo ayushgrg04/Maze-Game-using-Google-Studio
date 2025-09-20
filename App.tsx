@@ -111,29 +111,59 @@ const ActionButtons: React.FC<{
     currentPlayer: Player;
     wallPreview: Omit<Wall, 'playerId'> | null;
     onTogglePlacingWall: () => void;
-    showNewGameButton: boolean;
-    onNewGameConfirm?: () => void;
+    secondaryAction?: {
+        label: string;
+        onClick: () => void;
+        disabled?: boolean;
+        colorClass: string;
+    };
     onConfirmWall: () => void;
     onCancelWall: () => void;
     buttonHeightClass?: string;
-}> = ({ isMyTurn, isPlacingWall, currentPlayer, wallPreview, onTogglePlacingWall, showNewGameButton, onNewGameConfirm, onConfirmWall, onCancelWall, buttonHeightClass = 'h-14' }) => {
-    if (wallPreview) {
-        return (
-            <div className="flex w-full space-x-4 mt-2">
-                <button onClick={onCancelWall} className="w-full py-3 rounded-lg font-bold text-white bg-orange-500 button-glow button-glow-orange">Cancel</button>
-                <button onClick={onConfirmWall} className="w-full py-3 rounded-lg font-bold text-white bg-green-500 button-glow button-glow-green">Confirm Wall</button>
-            </div>
-        );
-    }
+}> = ({ isMyTurn, isPlacingWall, currentPlayer, wallPreview, onTogglePlacingWall, secondaryAction, onConfirmWall, onCancelWall, buttonHeightClass = 'h-14' }) => {
+    
     const wallButtonColorClass = currentPlayer.color === '#ec4899' ? 'bg-pink-500 button-glow-pink' : 'bg-cyan-500 button-glow-cyan';
+    const finalWallButtonClass = isPlacingWall ? 'bg-orange-500 button-glow-orange' : wallButtonColorClass;
+
     return (
-        <div className="flex w-full items-center space-x-4 mt-2">
-            <button onClick={onTogglePlacingWall} disabled={!currentPlayer || currentPlayer.wallsLeft === 0 || !isMyTurn} className={`w-full ${buttonHeightClass} rounded-lg font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed button-glow ${isPlacingWall ? 'bg-orange-500 button-glow-orange' : wallButtonColorClass}`}>
-                {isPlacingWall ? 'Cancel' : 'Place Wall'}
-            </button>
-            {showNewGameButton && (
-                 <button onClick={onNewGameConfirm} disabled={!isMyTurn} className={`w-full ${buttonHeightClass} rounded-lg font-bold text-white bg-fuchsia-600 button-glow button-glow-purple disabled:opacity-50 disabled:cursor-not-allowed`}>New Game</button>
-            )}
+        <div className={`relative w-full mt-2 ${buttonHeightClass}`}>
+            {/* --- Button Set 1: Default Actions --- */}
+            <div className={`absolute inset-0 flex w-full items-center space-x-4 transition-all duration-300 ease-in-out ${
+                    wallPreview ? 'opacity-0 transform scale-95 pointer-events-none' : 'opacity-100 transform scale-100'
+                }`}
+                aria-hidden={!!wallPreview}
+            >
+                <button 
+                    onClick={onTogglePlacingWall} 
+                    disabled={!currentPlayer || currentPlayer.wallsLeft === 0 || !isMyTurn} 
+                    className={`w-full h-full rounded-lg font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed button-glow ${finalWallButtonClass}`}
+                >
+                    {isPlacingWall ? 'Cancel' : 'Place Wall'}
+                </button>
+                {secondaryAction && (
+                     <button 
+                        onClick={secondaryAction.onClick} 
+                        disabled={!isMyTurn || secondaryAction.disabled} 
+                        className={`w-full h-full rounded-lg font-bold text-white button-glow ${secondaryAction.colorClass} disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                        {secondaryAction.label}
+                    </button>
+                )}
+            </div>
+            
+            {/* --- Button Set 2: Wall Confirmation Actions --- */}
+            <div className={`absolute inset-0 flex w-full space-x-4 transition-all duration-300 ease-in-out ${
+                    wallPreview ? 'opacity-100 transform scale-100' : 'opacity-0 transform scale-95 pointer-events-none'
+                }`}
+                aria-hidden={!wallPreview}
+            >
+                <button onClick={onCancelWall} className="w-full h-full rounded-lg font-bold text-white bg-orange-500 button-glow button-glow-orange">
+                    Cancel
+                </button>
+                <button onClick={onConfirmWall} className="w-full h-full rounded-lg font-bold text-white bg-green-500 button-glow button-glow-green">
+                    Confirm Wall
+                </button>
+            </div>
         </div>
     );
 };
@@ -166,7 +196,7 @@ const App: React.FC = () => {
     const [playerName, setPlayerName] = useState(() => sessionStorage.getItem('playerName') || 'Player 1');
 
     const gameBoardSizerRef = useRef<HTMLDivElement>(null);
-    const [boardSize, setBoardSize] = useState(0);
+    const [boardPixelSize, setBoardPixelSize] = useState(0);
 
     const handlePlayerNameChange = (name: string) => {
         setPlayerName(name);
@@ -223,7 +253,7 @@ const App: React.FC = () => {
                 const container = gameBoardSizerRef.current;
                 const { width, height } = container.getBoundingClientRect();
                 const size = Math.min(width, height);
-                setBoardSize(size);
+                setBoardPixelSize(size);
             }
         };
         
@@ -436,8 +466,8 @@ const App: React.FC = () => {
                     )}
                 </div>
                 <div ref={gameBoardSizerRef} className="w-full flex-1 flex items-center justify-center min-h-0">
-                    <div style={{ width: boardSize > 0 ? `${boardSize}px` : '100%', height: boardSize > 0 ? `${boardSize}px` : '100%' }}>
-                        <GameBoard players={players} walls={walls} currentPlayerId={currentPlayerId} selectedPiece={selectedPiece} validMoves={validMoves} isPlacingWall={isPlacingWall} wallPreview={wallPreview} onCellClick={handleCellClick} onWallPreview={handleWallPreview} onCancelWallPreview={cancelWallPlacement} />
+                    <div style={{ width: boardPixelSize > 0 ? `${boardPixelSize}px` : '100%', height: boardPixelSize > 0 ? `${boardPixelSize}px` : '100%' }}>
+                        <GameBoard players={players} walls={walls} currentPlayerId={currentPlayerId} selectedPiece={selectedPiece} validMoves={validMoves} isPlacingWall={isPlacingWall} wallPreview={wallPreview} onCellClick={handleCellClick} onWallPreview={handleWallPreview} onCancelWallPreview={cancelWallPlacement} boardPixelSize={boardPixelSize} />
                     </div>
                 </div>
             </div>
@@ -459,8 +489,11 @@ const App: React.FC = () => {
                     currentPlayer={player1} 
                     wallPreview={wallPreview} 
                     onTogglePlacingWall={withSound(togglePlacingWall)} 
-                    showNewGameButton={true}
-                    onNewGameConfirm={withSound(() => setShowNewGameConfirm(true))} 
+                    secondaryAction={{
+                        label: 'New Game',
+                        onClick: withSound(() => setShowNewGameConfirm(true)),
+                        colorClass: 'bg-fuchsia-600 button-glow-purple',
+                    }}
                     onConfirmWall={withSound(confirmWallPlacement)} 
                     onCancelWall={withSound(cancelWallPlacement)} 
                 />
@@ -486,7 +519,6 @@ const App: React.FC = () => {
                         onTogglePlacingWall={withSound(togglePlacingWall)}
                         onConfirmWall={withSound(confirmWallPlacement)}
                         onCancelWall={withSound(cancelWallPlacement)}
-                        showNewGameButton={false}
                         buttonHeightClass="h-12"
                     />
                 </div>
@@ -511,8 +543,8 @@ const App: React.FC = () => {
                     </button>
                 </div>
                 <div ref={gameBoardSizerRef} className="w-full flex-1 flex items-center justify-center min-h-0">
-                    <div style={{ width: boardSize > 0 ? `${boardSize}px` : '100%', height: boardSize > 0 ? `${boardSize}px` : '100%' }}>
-                        <GameBoard players={players} walls={walls} currentPlayerId={currentPlayerId} selectedPiece={selectedPiece} validMoves={validMoves} isPlacingWall={isPlacingWall} wallPreview={wallPreview} onCellClick={handleCellClick} onWallPreview={handleWallPreview} onCancelWallPreview={cancelWallPlacement} />
+                    <div style={{ width: boardPixelSize > 0 ? `${boardPixelSize}px` : '100%', height: boardPixelSize > 0 ? `${boardPixelSize}px` : '100%' }}>
+                        <GameBoard players={players} walls={walls} currentPlayerId={currentPlayerId} selectedPiece={selectedPiece} validMoves={validMoves} isPlacingWall={isPlacingWall} wallPreview={wallPreview} onCellClick={handleCellClick} onWallPreview={handleWallPreview} onCancelWallPreview={cancelWallPlacement} boardPixelSize={boardPixelSize} />
                     </div>
                 </div>
             </div>
@@ -532,7 +564,6 @@ const App: React.FC = () => {
                         onTogglePlacingWall={withSound(togglePlacingWall)}
                         onConfirmWall={withSound(confirmWallPlacement)}
                         onCancelWall={withSound(cancelWallPlacement)}
-                        showNewGameButton={false}
                         buttonHeightClass="h-12"
                     />
                 </div>

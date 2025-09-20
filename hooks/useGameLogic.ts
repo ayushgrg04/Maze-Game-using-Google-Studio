@@ -614,7 +614,10 @@ const useGameLogic = () => {
   }, []);
 
 
-  const handleWallPreview = useCallback((wall: Omit<Wall, 'playerId'>) => setWallPreview(wall), []);
+  const handleWallPreview = useCallback((wall: Omit<Wall, 'playerId'>) => {
+    setWallPlacementError(null); // Clear previous errors on new preview
+    setWallPreview(wall)
+  }, []);
   const confirmWallPlacement = useCallback(() => {
     if (wallPreview) {
         handlePlaceWall(wallPreview);
@@ -622,7 +625,11 @@ const useGameLogic = () => {
         setIsPlacingWall(false); // Always exit placing mode after confirming
     }
   }, [wallPreview, handlePlaceWall]);
-  const cancelWallPlacement = useCallback(() => setWallPreview(null), []);
+
+  const cancelWallPlacement = useCallback(() => {
+    setWallPreview(null);
+    setIsPlacingWall(false); // Exit wall placement mode completely.
+  }, []);
   
   const togglePlacingWall = () => {
     if (isPlacingWall) setWallPreview(null);
