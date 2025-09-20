@@ -1,10 +1,4 @@
 
-
-
-
-
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameLogic } from './hooks/useGameLogic';
 import GameBoard from './components/GameBoard';
@@ -57,6 +51,8 @@ const TravelingEmoji: React.FC<{
         // In online PvP, the sender's emoji always comes from the bottom of their screen.
         isFromBottom = fromPlayerId === localPlayerId;
     }
+    
+    const isRotated = gameMode === GameMode.PVP && fromPlayerId === 2;
 
     return (
         <div
@@ -67,7 +63,9 @@ const TravelingEmoji: React.FC<{
             top: isFromBottom ? 'auto' : '15%',
           }}
         >
-          {emoji}
+          <span className={isRotated ? 'inline-block rotate-180' : 'inline-block'}>
+            {emoji}
+          </span>
           <style>{`
             @keyframes emoji-travel-from-bottom {
               0% { transform: translate(-50%, 0) scale(1.5); opacity: 1; }
@@ -118,7 +116,7 @@ const TurnTimer: React.FC<{
     const turnTimeClasses = `${timeTextBaseClasses} transition-colors ${isActive && currentTime <= 10 ? 'text-red-400 animate-pulse' : turnTimeColor}`;
 
     return (
-        <div className={`magical-container ${containerClasses}`}>
+        <div className={`magical-container ${containerClasses} transition-opacity ${!isActive ? 'opacity-50' : ''}`}>
             <p className={labelClasses}>Turn Time</p>
             <p className={turnTimeClasses} style={player ? {textShadow: `0 0 8px ${player.color}`} : {}}>{formatTime(timeToDisplay)}</p>
         </div>
@@ -252,7 +250,7 @@ const App: React.FC = () => {
         isMyTurn, pendingJoinId, travelingEmoji,
         startGame, handleCellClick, handleWallPreview, confirmWallPlacement, cancelWallPlacement,
         togglePlacingWall, returnToMenu, handleCreateOnlineGame, handleJoinOnlineGame, handleFindMatch, handleCancelFindMatch, handleCancelCreateGame,
-        cancelJoin, handleSendEmoji,
+        cancelJoin, handleSendEmoji, clearWallPlacementError,
     } = useGameLogic();
 
     type MenuScreen = 'main' | 'local_setup' | 'online_setup';
@@ -357,14 +355,24 @@ const App: React.FC = () => {
     }, [lastAiAction]);
 
     useEffect(() => {
-        const message = apiError || wallPlacementError;
-        if (message) {
+        if (wallPlacementError) {
             soundService.play(Sound.Error);
-            setErrorToast(message);
-            const timer = setTimeout(() => setErrorToast(null), 5000);
+            setErrorToast(wallPlacementError);
+            const timer = setTimeout(() => {
+                // This will trigger a re-render where wallPlacementError is null,
+                // which will then cause the toast to be hidden by the `else` block.
+                clearWallPlacementError();
+            }, 3000); // 3 seconds
             return () => clearTimeout(timer);
+        } else if (apiError) {
+            // Handle apiError separately without auto-clearing
+            soundService.play(Sound.Error);
+            setErrorToast(apiError);
+        } else {
+            // No errors, so hide the toast
+            setErrorToast(null);
         }
-    }, [apiError, wallPlacementError]);
+    }, [apiError, wallPlacementError, clearWallPlacementError]);
     
     const handleToggleMute = () => {
         soundService.toggleMute();
@@ -459,7 +467,7 @@ const App: React.FC = () => {
                         <div className="text-center space-y-6">
                             <div className="space-y-1">
                                 <p className="text-lg text-gray-300">Developed by</p>
-                                <p className="text-3xl font-bold font-magic text-cyan-400" style={{textShadow: '0 0 8px var(--glow-cyan)'}}>Onetechzilla (Ayush Garg)</p>
+                                <p className="text-3xl font-semibold tracking-wider text-fuchsia-400" style={{fontFamily: "Garamond, 'Times New Roman', serif"}}>Onetechzilla (Ayush Garg)</p>
                             </div>
                             <div className="space-y-1">
                                 <p className="text-lg text-gray-300">Contact</p>
@@ -516,9 +524,14 @@ const App: React.FC = () => {
                             {gameMode === GameMode.PVC && aiMessage && <AiChatTooltip message={aiMessage} />}
                         </div>
                     </div>
-                    <div className="flex-1" />
+                    <div className="flex-1 flex justify-center">
+                        <div className="text-center">
+                            <p className="text-sm font-medium text-gray-400">GAME TIME</p>
+                            <p className="text-2xl font-bold text-gray-200">{formatTime(gameTime)}</p>
+                        </div>
+                    </div>
                     <div className="flex-1 flex justify-end">
-                        {currentPlayer?.id === player2?.id && <TurnTimer currentTime={turnTime} initialTime={configuredTurnTime} player={currentPlayer} isActive={true} />}
+                       {player2 && <TurnTimer currentTime={turnTime} initialTime={configuredTurnTime} player={player2} isActive={currentPlayer?.id === player2.id} />}
                     </div>
                 </div>
             </header>
@@ -532,12 +545,8 @@ const App: React.FC = () => {
                             <span className="font-semibold text-gray-300">{aiPlayerName} is thinking...</span>
                         </div>
                     ) : (
-                        <div className="flex items-center justify-center gap-8">
+                        <div className="flex items-center justify-center">
                             {currentPlayer && <TurnIndicator player={currentPlayer} />}
-                            <div className="text-center">
-                                <p className="text-sm font-medium text-gray-400">GAME TIME</p>
-                                <p className="text-2xl font-bold text-gray-200">{formatTime(gameTime)}</p>
-                            </div>
                         </div>
                     )}
                 </div>
@@ -552,7 +561,7 @@ const App: React.FC = () => {
             <footer className="w-full max-w-2xl flex-shrink-0 mx-auto">
                 <div className="flex justify-between items-center w-full">
                     <div className="flex-1 flex justify-start">
-                        {currentPlayer?.id === player1?.id && <TurnTimer currentTime={turnTime} initialTime={configuredTurnTime} player={currentPlayer} isActive={true} />}
+                        {player1 && <TurnTimer currentTime={turnTime} initialTime={configuredTurnTime} player={player1} isActive={currentPlayer?.id === player1.id} />}
                     </div>
                     <div className="flex-shrink-0 px-2">
                         {gameMode === GameMode.PVO && <EmojiPlate onSelect={(emoji) => handleSendEmoji(emoji)} enabled={true} />}
@@ -721,7 +730,11 @@ const App: React.FC = () => {
                     </Modal>
                 )}
                 {errorToast && (
-                    <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-orange-900/80 border border-orange-500 text-orange-200 px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50 animate-fade-in-down backdrop-blur-sm">
+                    <div className={`fixed left-1/2 bg-orange-900/80 border border-orange-500 text-orange-200 px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50 backdrop-blur-sm ${
+                        gameMode === GameMode.PVP && currentPlayerId === 2
+                        ? 'bottom-14 animate-toast-p2'
+                        : 'top-4 animate-fade-in-down'
+                    }`}>
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         <span className="font-semibold">{errorToast}</span>
                     </div>
@@ -732,6 +745,14 @@ const App: React.FC = () => {
                     }
                     @keyframes fade-in-down{from{opacity:0;transform:translate(-50%,-20px)}to{opacity:1;transform:translate(-50%,0)}}
                     .animate-fade-in-down{animation:fade-in-down .5s ease-out forwards}
+
+                    @keyframes toast-p2-anim {
+                      from { opacity: 0; transform: translate(-50%, 20px) rotate(180deg); }
+                      to   { opacity: 1; transform: translate(-50%, 0) rotate(180deg); }
+                    }
+                    .animate-toast-p2 {
+                      animation: toast-p2-anim .5s ease-out forwards;
+                    }
 
                     @keyframes celebrate {
                         0% { transform: translateY(0) scale(1); opacity: 1; }

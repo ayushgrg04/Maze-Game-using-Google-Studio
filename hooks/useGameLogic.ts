@@ -175,7 +175,7 @@ const useGameLogic = () => {
     setGameState(GameState.PLAYING);
   }, [resetGameState]);
   
-  const isValidWallPlacement = useCallback((wall: Wall, currentWalls: Wall[], p1: Player, p2: Player): true | string => {
+  const isValidWallPlacement = useCallback((wall: Wall, currentWalls: Wall[], p1: Player, p2: Player, perspectivePlayerId?: 1 | 2): true | string => {
     const player = p1.id === wall.playerId ? p1 : p2;
     if (!player || player.wallsLeft <= 0) return "You have no walls left.";
     
@@ -196,13 +196,23 @@ const useGameLogic = () => {
 
     const newWalls = [...currentWalls, wall];
     const p1PathExists = findShortestPath(p1.position, p1.goalRow, newWalls, p2.position) !== null;
-    if (!p1PathExists) return `This wall would trap ${p1.name}.`;
+    if (!p1PathExists) {
+        if (gameMode === GameMode.PVP && perspectivePlayerId) {
+             return p1.id === perspectivePlayerId ? "This wall would trap you." : `This wall would trap your opponent (${p1.name}).`;
+        }
+        return `This wall would trap ${p1.name}.`;
+    }
 
     const p2PathExists = findShortestPath(p2.position, p2.goalRow, newWalls, p1.position) !== null;
-    if (!p2PathExists) return `This wall would trap ${p2.name}.`;
+    if (!p2PathExists) {
+        if (gameMode === GameMode.PVP && perspectivePlayerId) {
+             return p2.id === perspectivePlayerId ? "This wall would trap you." : `This wall would trap your opponent (${p2.name}).`;
+        }
+        return `This wall would trap ${p2.name}.`;
+    }
     
     return true;
-  }, []);
+  }, [gameMode]);
 
   const switchTurn = useCallback(() => {
     setCurrentPlayerId(prev => (prev === 1 ? 2 : 1));
@@ -329,7 +339,7 @@ const useGameLogic = () => {
     setWallPlacementError(null);
     const newWall: Wall = { ...realWall, playerId: currentPlayerId };
     
-    const validationResult = isValidWallPlacement(newWall, walls, players[1], players[2]);
+    const validationResult = isValidWallPlacement(newWall, walls, players[1], players[2], currentPlayerId);
     if (validationResult !== true) {
         setWallPlacementError(validationResult);
         return;
@@ -462,7 +472,7 @@ const useGameLogic = () => {
     try {
         let aiAction: AiAction;
         if (aiType === AiType.LOCAL) {
-            const checkWall = (wall: Wall) => isValidWallPlacement(wall, walls, players[1], players[2]) === true;
+            const checkWall = (wall: Wall) => isValidWallPlacement(wall, walls, players[1], players[2], 2) === true;
             aiAction = getLocalAiMove(players[2], players[1], walls, difficulty, checkWall);
         } else {
             aiAction = await getAiMove(players, 2, walls, difficulty);
@@ -481,7 +491,7 @@ const useGameLogic = () => {
         } else if (aiAction.action === 'PLACE_WALL') {
             if (!aiAction.position || !aiAction.orientation) throw new Error("AI action 'PLACE_WALL' is missing properties.");
             const wallToPlace = { r: aiAction.position.r, c: aiAction.position.c, orientation: aiAction.orientation };
-            if (isValidWallPlacement({ ...wallToPlace, playerId: 2 }, walls, players[1], players[2]) === true) handlePlaceWall(wallToPlace);
+            if (isValidWallPlacement({ ...wallToPlace, playerId: 2 }, walls, players[1], players[2], 2) === true) handlePlaceWall(wallToPlace);
             else throw new Error("AI suggested an invalid wall placement.");
         } else {
             throw new Error(`AI returned an invalid action type.`);
@@ -764,6 +774,10 @@ const useGameLogic = () => {
 
   }, [gameMode, onlineGameId, onlinePlayerId]);
 
+  const clearWallPlacementError = useCallback(() => {
+    setWallPlacementError(null);
+  }, []);
+
   return {
     gameState, gameMode, difficulty, aiType, 
     currentPlayerId: displayCurrentPlayerId, // Return the transformed ID for the UI
@@ -787,6 +801,7 @@ const useGameLogic = () => {
     handleCreateOnlineGame, handleJoinOnlineGame, handleFindMatch, handleCancelFindMatch, handleCancelCreateGame,
     cancelJoin,
     handleSendEmoji,
+    clearWallPlacementError,
   };
 };
 
