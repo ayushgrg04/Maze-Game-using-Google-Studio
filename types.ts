@@ -1,6 +1,7 @@
 
 
 
+
 export type Player = {
   id: 1 | 2;
   name: string;
@@ -27,7 +28,6 @@ export enum GameState {
   PLAYING = 'PLAYING',
   GAME_OVER = 'GAME_OVER',
   ONLINE_WAITING = 'ONLINE_WAITING',
-  AWAITING_AUTH = 'AWAITING_AUTH',
 }
 
 export enum GameMode {

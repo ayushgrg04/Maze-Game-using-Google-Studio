@@ -1,33 +1,52 @@
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameLogic } from './hooks/useGameLogic';
 import GameBoard from './components/GameBoard';
 import PlayerInfo from './components/PlayerInfo';
 import Modal from './components/Modal';
 import HelpModal from './components/HelpModal';
-import GoogleSignInModal from './components/GoogleSignInModal';
 import { AiChatTooltip } from './components/AiChatTooltip';
-import { GameState, GameMode, Difficulty, Player, AiType, StartPosition } from './types';
-import { authService } from './services/authService';
+// Fix: Import the 'Wall' type to resolve the TypeScript error.
+import { GameState, GameMode, Difficulty, Player, AiType, StartPosition, Wall } from './types';
 import { AnimatedMenuBackground } from './components/AnimatedMenuBackground';
 import { soundService, Sound } from './services/soundService';
 
-const TurnIndicator: React.FC<{player: Player}> = ({ player }) => (
-    <div className="magical-container rounded-full px-4 py-2 flex items-center space-x-3">
-        <div className={`w-3 h-3 rounded-full`} style={{ backgroundColor: player.color, boxShadow: `0 0 6px ${player.color}` }}></div>
-        <span className="font-semibold text-gray-200">{player.name}'s Turn</span>
-    </div>
-);
+const TurnIndicator: React.FC<{ player: Player; size?: 'sm' | 'md' }> = ({ player, size = 'md' }) => {
+    const containerClasses = size === 'sm' ? 'px-3 py-1 space-x-2' : 'px-4 py-2 space-x-3';
+    const dotSize = size === 'sm' ? 'w-2 h-2' : 'w-3 h-3';
+    const textSize = size === 'sm' ? 'text-sm' : '';
+
+    return (
+        <div className={`magical-container rounded-full flex items-center ${containerClasses}`}>
+            <div className={`${dotSize} rounded-full`} style={{ backgroundColor: player.color, boxShadow: `0 0 6px ${player.color}` }}></div>
+            <span className={`font-semibold text-gray-200 ${textSize}`}>{player.name}'s Turn</span>
+        </div>
+    );
+};
 
 const formatTime = (seconds: number) => new Date(seconds * 1000).toISOString().substr(14, 5);
 
-const TurnTimer: React.FC<{ turnTime: number; player: Player | undefined }> = ({ turnTime, player }) => {
+const TurnTimer: React.FC<{
+    currentTime: number;
+    initialTime: number;
+    player: Player | undefined;
+    isActive: boolean;
+    size?: 'sm' | 'md';
+}> = ({ currentTime, initialTime, player, isActive, size = 'md' }) => {
+    const timeToDisplay = isActive ? currentTime : initialTime;
+    
+    const containerClasses = size === 'sm' ? "rounded-xl p-2 text-center w-28" : "rounded-xl p-3 text-center w-32";
+    const labelClasses = size === 'sm' ? "text-[10px] font-medium text-gray-400 uppercase tracking-wider" : "text-xs font-medium text-gray-400 uppercase tracking-wider";
+    const timeTextBaseClasses = size === 'sm' ? "text-xl font-bold" : "text-2xl font-bold";
+    
     const turnTimeColor = !player ? 'text-gray-200' : 'text-white';
-    const turnTimeClasses = `text-2xl font-bold transition-colors ${turnTime <= 10 ? 'text-red-400 animate-pulse' : turnTimeColor}`;
+    const turnTimeClasses = `${timeTextBaseClasses} transition-colors ${isActive && currentTime <= 10 ? 'text-red-400 animate-pulse' : turnTimeColor}`;
 
     return (
-        <div className="text-center">
-            <p className="text-sm font-medium text-gray-400">TURN TIME</p>
-            <p className={turnTimeClasses} style={player ? {textShadow: `0 0 8px ${player.color}`} : {}}>{formatTime(turnTime)}</p>
+        <div className={`magical-container ${containerClasses}`}>
+            <p className={labelClasses}>Turn Time</p>
+            <p className={turnTimeClasses} style={player ? {textShadow: `0 0 8px ${player.color}`} : {}}>{formatTime(timeToDisplay)}</p>
         </div>
     );
 };
@@ -86,6 +105,39 @@ const MuteButton: React.FC<{ isMuted: boolean; onClick: () => void; }> = ({ isMu
     </button>
 );
 
+const ActionButtons: React.FC<{
+    isMyTurn: boolean;
+    isPlacingWall: boolean;
+    currentPlayer: Player;
+    wallPreview: Omit<Wall, 'playerId'> | null;
+    onTogglePlacingWall: () => void;
+    showNewGameButton: boolean;
+    onNewGameConfirm?: () => void;
+    onConfirmWall: () => void;
+    onCancelWall: () => void;
+    buttonHeightClass?: string;
+}> = ({ isMyTurn, isPlacingWall, currentPlayer, wallPreview, onTogglePlacingWall, showNewGameButton, onNewGameConfirm, onConfirmWall, onCancelWall, buttonHeightClass = 'h-14' }) => {
+    if (wallPreview) {
+        return (
+            <div className="flex w-full space-x-4 mt-2">
+                <button onClick={onCancelWall} className="w-full py-3 rounded-lg font-bold text-white bg-orange-500 button-glow button-glow-orange">Cancel</button>
+                <button onClick={onConfirmWall} className="w-full py-3 rounded-lg font-bold text-white bg-green-500 button-glow button-glow-green">Confirm Wall</button>
+            </div>
+        );
+    }
+    const wallButtonColorClass = currentPlayer.color === '#ec4899' ? 'bg-pink-500 button-glow-pink' : 'bg-cyan-500 button-glow-cyan';
+    return (
+        <div className="flex w-full items-center space-x-4 mt-2">
+            <button onClick={onTogglePlacingWall} disabled={!currentPlayer || currentPlayer.wallsLeft === 0 || !isMyTurn} className={`w-full ${buttonHeightClass} rounded-lg font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed button-glow ${isPlacingWall ? 'bg-orange-500 button-glow-orange' : wallButtonColorClass}`}>
+                {isPlacingWall ? 'Cancel' : 'Place Wall'}
+            </button>
+            {showNewGameButton && (
+                 <button onClick={onNewGameConfirm} disabled={!isMyTurn} className={`w-full ${buttonHeightClass} rounded-lg font-bold text-white bg-fuchsia-600 button-glow button-glow-purple disabled:opacity-50 disabled:cursor-not-allowed`}>New Game</button>
+            )}
+        </div>
+    );
+};
+
 
 const App: React.FC = () => {
     const {
@@ -96,7 +148,7 @@ const App: React.FC = () => {
         isMyTurn, pendingJoinId,
         startGame, handleCellClick, handleWallPreview, confirmWallPlacement, cancelWallPlacement,
         togglePlacingWall, returnToMenu, handleCreateOnlineGame, handleJoinOnlineGame, handleFindMatch, handleCancelFindMatch, handleCancelCreateGame,
-        cancelAuth, cancelJoin,
+        cancelJoin,
     } = useGameLogic();
 
     type MenuScreen = 'main' | 'local_setup' | 'online_setup';
@@ -105,11 +157,21 @@ const App: React.FC = () => {
     const [errorToast, setErrorToast] = useState<string | null>(null);
     const [showHelp, setShowHelp] = useState(false);
     const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
-    const [showComingSoon, setShowComingSoon] = useState(false);
     const [isMuted, setIsMuted] = useState(soundService.isMuted);
-    
+    const [showCopyrightModal, setShowCopyrightModal] = useState(false);
+    const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+    const [showAboutModal, setShowAboutModal] = useState(false);
+    const [privacyPolicyContent, setPrivacyPolicyContent] = useState('');
+    const [showComingSoonModal, setShowComingSoonModal] = useState(false);
+    const [playerName, setPlayerName] = useState(() => sessionStorage.getItem('playerName') || 'Player 1');
+
     const gameBoardSizerRef = useRef<HTMLDivElement>(null);
     const [boardSize, setBoardSize] = useState(0);
+
+    const handlePlayerNameChange = (name: string) => {
+        setPlayerName(name);
+        sessionStorage.setItem('playerName', name);
+    };
 
     // Effect for timer tick sound
     const turnTimeRef = useRef(turnTime);
@@ -129,6 +191,27 @@ const App: React.FC = () => {
             }, 500); // Match CSS transition time
         }
     }, []);
+
+    useEffect(() => {
+        if (showPrivacyModal) {
+            fetch('privacy_policy.html')
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const mainContent = doc.querySelector('main');
+                    if (mainContent) {
+                        setPrivacyPolicyContent(mainContent.innerHTML);
+                    } else {
+                        setPrivacyPolicyContent('<p>Could not load policy.</p>');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching privacy policy:', error);
+                    setPrivacyPolicyContent('<p>Error loading privacy policy. Please try again later.</p>');
+                });
+        }
+    }, [showPrivacyModal]);
 
     useEffect(() => {
         if (gameState !== GameState.PLAYING && gameState !== GameState.GAME_OVER) {
@@ -190,18 +273,24 @@ const App: React.FC = () => {
     };
 
     const renderMenu = () => {
-        const playerName = sessionStorage.getItem('playerName') || 'Player 1';
-
         switch(menuScreen) {
             case 'main':
-                return <MainMenu onNavigate={withSound(setMenuScreen)} />;
+                return <MainMenu 
+                            playerName={playerName}
+                            onPlayerNameChange={handlePlayerNameChange}
+                            onNavigate={withSound(setMenuScreen)} 
+                            onShowCopyright={withSound(() => setShowCopyrightModal(true))}
+                            onShowPrivacy={withSound(() => setShowPrivacyModal(true))}
+                            onShowHelp={withSound(() => setShowHelp(true))}
+                            onShowAbout={withSound(() => setShowAboutModal(true))}
+                        />;
             case 'local_setup':
                 return (
                     <LocalGameSetup 
                       playerName={playerName}
                       onStartGame={(...args) => withSound(startGame)(...args)}
                       onBack={withSound(() => setMenuScreen('main'))}
-                      setShowComingSoon={withSound(setShowComingSoon)}
+                      onShowComingSoon={withSound(() => setShowComingSoonModal(true))}
                     />
                 );
             case 'online_setup':
@@ -218,14 +307,13 @@ const App: React.FC = () => {
     }
     
     if (gameState === GameState.MENU) {
-        const playerName = sessionStorage.getItem('playerName') || 'Player 1';
         if (pendingJoinId) {
             return (
                 <JoinGamePrompt
                     gameId={pendingJoinId}
                     initialPlayerName={playerName}
                     onJoin={(gameId, name) => {
-                        sessionStorage.setItem('playerName', name);
+                        handlePlayerNameChange(name);
                         withSound(handleJoinOnlineGame)(gameId, name);
                     }}
                     onCancel={withSound(cancelJoin)}
@@ -239,29 +327,60 @@ const App: React.FC = () => {
 
                 {showHelp && <HelpModal onClose={withSound(() => setShowHelp(false))} />}
                 
-                {showComingSoon && (
-                     <Modal title="Coming Soon!" onClose={withSound(() => setShowComingSoon(false))}>
+                {showCopyrightModal && (
+                     <Modal title="Copyright Policy" onClose={withSound(() => setShowCopyrightModal(false))}>
                         <div className="text-center space-y-4">
-                            <p className="text-gray-300 text-lg">The powerful Gemini AI opponent is under development and will be available in a future update. Stay tuned!</p>
-                            <button onClick={withSound(() => setShowComingSoon(false))} className="w-full bg-cyan-500 text-white font-bold py-3 rounded-lg button-glow button-glow-cyan">OK</button>
+                            <p className="text-gray-300 text-lg">© 2025 Maze Magic. All rights reserved.</p>
+                            <p className="text-gray-400 text-sm">
+                                The game, including its code, graphics, and sounds, is the property of the developer and protected by copyright laws.
+                            </p>
+                            <button onClick={withSound(() => setShowCopyrightModal(false))} className="w-full bg-cyan-500 text-white font-bold py-3 rounded-lg button-glow button-glow-cyan">OK</button>
                         </div>
+                    </Modal>
+                )}
+                
+                {showComingSoonModal && (
+                     <Modal title="Coming Soon!" onClose={withSound(() => setShowComingSoonModal(false))}>
+                        <div className="text-center space-y-4">
+                            <p className="text-gray-300">The advanced Gemini AI opponent is under development and will be available in a future update. Stay tuned!</p>
+                            <button onClick={withSound(() => setShowComingSoonModal(false))} className="w-full bg-cyan-500 text-white font-bold py-3 rounded-lg button-glow button-glow-cyan">OK</button>
+                        </div>
+                    </Modal>
+                )}
+
+                {showAboutModal && (
+                    <Modal title="About Me" onClose={withSound(() => setShowAboutModal(false))}>
+                        <div className="text-center space-y-6">
+                            <div className="space-y-1">
+                                <p className="text-lg text-gray-300">Developed by</p>
+                                <p className="text-3xl font-bold font-magic text-cyan-400" style={{textShadow: '0 0 8px var(--glow-cyan)'}}>Onetechzilla (Ayush Garg)</p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-lg text-gray-300">Contact</p>
+                                <a href="mailto:onetechzilla@gmail.com" className="text-lg text-pink-400 hover:underline">onetechzilla@gmail.com</a>
+                            </div>
+                            <button onClick={withSound(() => setShowAboutModal(false))} className="w-full mt-4 bg-cyan-500 text-white font-bold py-3 rounded-lg button-glow button-glow-cyan">Close</button>
+                        </div>
+                    </Modal>
+                )}
+
+                {showPrivacyModal && (
+                    <Modal title="Privacy Policy" onClose={withSound(() => setShowPrivacyModal(false))} className="max-w-2xl">
+                        <div 
+                            className="text-gray-300 max-h-[60vh] overflow-y-auto pr-4 -mr-6 custom-scrollbar privacy-policy-content"
+                            dangerouslySetInnerHTML={{ __html: privacyPolicyContent }}
+                        />
+                        <button onClick={withSound(() => setShowPrivacyModal(false))} className="w-full mt-6 bg-cyan-500 text-white font-bold py-3 rounded-lg button-glow button-glow-cyan">Close</button>
                     </Modal>
                 )}
 
                 <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4">
                     <div className="w-full max-w-md magical-container p-6 md:p-8 rounded-2xl relative">
                         {renderMenu()}
-                        <div className="mt-6">
-                           <button onClick={withSound(() => setShowHelp(true))} className="w-full bg-fuchsia-600 text-white font-bold py-3 rounded-lg button-glow button-glow-purple transition-all text-lg">How to Play</button>
-                        </div>
                     </div>
                 </div>
             </>
         );
-    }
-    
-    if (gameState === GameState.AWAITING_AUTH) {
-        return <GoogleSignInModal onSignIn={withSound(() => authService.signIn())} onCancel={withSound(cancelAuth)} />;
     }
     
     const pageBackgroundClasses = "fixed inset-0 flex items-center justify-center z-50 bg-gradient-to-b from-[var(--dark-bg-start)] to-[var(--dark-bg-end)]";
@@ -273,88 +392,159 @@ const App: React.FC = () => {
         );
     }
 
+    const isPvpMode = gameMode === GameMode.PVP;
+    const player1 = players[1];
+    const player2 = players[2];
     const currentPlayer = players[currentPlayerId];
-    const myPlayer = players[1]; 
-    const opponentPlayer = players[2];
-    
     const aiPlayerName = players[2]?.name || 'AI';
+    
+    // Non-PvP Layout
+    const renderDefaultLayout = () => (
+        <>
+            {/* PLAYER 2 (TOP) AREA */}
+            <header className="w-full max-w-2xl flex-shrink-0 mx-auto">
+                <div className="flex justify-between items-center w-full">
+                    <div className="relative flex-1">
+                        <div className="inline-block relative">
+                            {player2 && <PlayerInfo player={player2} />}
+                            {gameMode === GameMode.PVC && aiMessage && <AiChatTooltip message={aiMessage} />}
+                        </div>
+                    </div>
+                    <div className="flex-1" />
+                    <div className="flex-1 flex justify-end">
+                        {currentPlayer?.id === player2?.id && <TurnTimer currentTime={turnTime} initialTime={configuredTurnTime} player={currentPlayer} isActive={true} />}
+                    </div>
+                </div>
+            </header>
+
+            {/* GAME BOARD (MIDDLE) AREA */}
+            <div className="w-full flex flex-col items-center justify-center py-1 min-h-0">
+                <div className="h-12 flex items-center justify-center my-1 flex-shrink-0">
+                    {aiThinking ? (
+                        <div className="magical-container p-3 rounded-full flex items-center gap-3 z-10">
+                            <svg className="animate-spin h-5 w-5 text-purple-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            <span className="font-semibold text-gray-300">{aiPlayerName} is thinking...</span>
+                        </div>
+                    ) : (
+                        <div className="flex items-center justify-center gap-8">
+                            {currentPlayer && <TurnIndicator player={currentPlayer} />}
+                            <div className="text-center">
+                                <p className="text-sm font-medium text-gray-400">GAME TIME</p>
+                                <p className="text-2xl font-bold text-gray-200">{formatTime(gameTime)}</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+                <div ref={gameBoardSizerRef} className="w-full flex-1 flex items-center justify-center min-h-0">
+                    <div style={{ width: boardSize > 0 ? `${boardSize}px` : '100%', height: boardSize > 0 ? `${boardSize}px` : '100%' }}>
+                        <GameBoard players={players} walls={walls} currentPlayerId={currentPlayerId} selectedPiece={selectedPiece} validMoves={validMoves} isPlacingWall={isPlacingWall} wallPreview={wallPreview} onCellClick={handleCellClick} onWallPreview={handleWallPreview} onCancelWallPreview={cancelWallPlacement} />
+                    </div>
+                </div>
+            </div>
+
+            {/* PLAYER 1 (BOTTOM) AREA */}
+            <footer className="w-full max-w-2xl flex-shrink-0 mx-auto">
+                <div className="flex justify-between items-center w-full">
+                    <div className="flex-1 flex justify-start">
+                        {currentPlayer?.id === player1?.id && <TurnTimer currentTime={turnTime} initialTime={configuredTurnTime} player={currentPlayer} isActive={true} />}
+                    </div>
+                    <div className="flex-1" />
+                    <div className="flex-1 flex justify-end">
+                        {player1 && <PlayerInfo player={player1} />}
+                    </div>
+                </div>
+                <ActionButtons 
+                    isMyTurn={isMyTurn} 
+                    isPlacingWall={isPlacingWall} 
+                    currentPlayer={player1} 
+                    wallPreview={wallPreview} 
+                    onTogglePlacingWall={withSound(togglePlacingWall)} 
+                    showNewGameButton={true}
+                    onNewGameConfirm={withSound(() => setShowNewGameConfirm(true))} 
+                    onConfirmWall={withSound(confirmWallPlacement)} 
+                    onCancelWall={withSound(cancelWallPlacement)} 
+                />
+            </footer>
+        </>
+    );
+
+    // PvP Layout - Symmetrical and Static
+    const renderPvpLayout = () => (
+         <>
+            {/* PLAYER 2 (TOP) HUB */}
+            <header className="w-full max-w-2xl flex-shrink-0 mx-auto rotate-180">
+                <div className="space-y-2">
+                    <div className="flex justify-between items-center w-full">
+                        <PlayerInfo player={player2} reverse size="sm" />
+                        <TurnTimer currentTime={turnTime} initialTime={configuredTurnTime} player={player2} isActive={currentPlayerId === 2} size="sm" />
+                    </div>
+                     <ActionButtons
+                        isMyTurn={currentPlayerId === 2}
+                        isPlacingWall={isPlacingWall && currentPlayerId === 2}
+                        currentPlayer={player2}
+                        wallPreview={currentPlayerId === 2 ? wallPreview : null}
+                        onTogglePlacingWall={withSound(togglePlacingWall)}
+                        onConfirmWall={withSound(confirmWallPlacement)}
+                        onCancelWall={withSound(cancelWallPlacement)}
+                        showNewGameButton={false}
+                        buttonHeightClass="h-12"
+                    />
+                </div>
+            </header>
+
+            {/* CENTRAL AREA */}
+            <div className="w-full flex flex-col items-center justify-center py-1 min-h-0">
+                <div className="magical-container rounded-full px-3 py-1 my-1 flex items-center justify-between w-full max-w-xs mx-auto">
+                    <div className="text-center">
+                        <p className="text-xs font-medium text-gray-400">TIME</p>
+                        <p className="text-lg font-bold text-gray-200">{formatTime(gameTime)}</p>
+                    </div>
+                    {currentPlayer && (
+                        <div className={`transition-transform duration-300 ${currentPlayerId === 2 ? 'rotate-180' : ''}`}>
+                            <TurnIndicator player={currentPlayer} size="sm" />
+                        </div>
+                    )}
+                    <button onClick={withSound(() => setShowNewGameConfirm(true))} className="p-2 rounded-full font-bold text-white bg-fuchsia-600 button-glow button-glow-purple" aria-label="New Game" title="Start New Game">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                           <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 110 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+                <div ref={gameBoardSizerRef} className="w-full flex-1 flex items-center justify-center min-h-0">
+                    <div style={{ width: boardSize > 0 ? `${boardSize}px` : '100%', height: boardSize > 0 ? `${boardSize}px` : '100%' }}>
+                        <GameBoard players={players} walls={walls} currentPlayerId={currentPlayerId} selectedPiece={selectedPiece} validMoves={validMoves} isPlacingWall={isPlacingWall} wallPreview={wallPreview} onCellClick={handleCellClick} onWallPreview={handleWallPreview} onCancelWallPreview={cancelWallPlacement} />
+                    </div>
+                </div>
+            </div>
+
+            {/* PLAYER 1 (BOTTOM) HUB */}
+            <footer className="w-full max-w-2xl flex-shrink-0 mx-auto">
+                 <div className="space-y-2">
+                    <div className="flex justify-between items-center w-full">
+                        <TurnTimer currentTime={turnTime} initialTime={configuredTurnTime} player={player1} isActive={currentPlayerId === 1} size="sm" />
+                        <PlayerInfo player={player1} size="sm" />
+                    </div>
+                    <ActionButtons
+                        isMyTurn={currentPlayerId === 1}
+                        isPlacingWall={isPlacingWall && currentPlayerId === 1}
+                        currentPlayer={player1}
+                        wallPreview={currentPlayerId === 1 ? wallPreview : null}
+                        onTogglePlacingWall={withSound(togglePlacingWall)}
+                        onConfirmWall={withSound(confirmWallPlacement)}
+                        onCancelWall={withSound(cancelWallPlacement)}
+                        showNewGameButton={false}
+                        buttonHeightClass="h-12"
+                    />
+                </div>
+            </footer>
+        </>
+    );
 
     return (
         <>
             <MuteButton isMuted={isMuted} onClick={withSound(handleToggleMute)} />
             <main className={`h-screen max-h-[100dvh] w-full grid grid-rows-[auto_1fr_auto] p-2 sm:p-4 bg-gradient-to-b from-[var(--dark-bg-start)] to-[var(--dark-bg-end)] overflow-hidden`}>
-                <header className="w-full max-w-2xl flex-shrink-0 mx-auto">
-                     <div className="flex justify-between items-center w-full">
-                        <div className="relative flex-1">
-                            <div className="inline-block relative">
-                              {opponentPlayer && <PlayerInfo player={opponentPlayer} />}
-                              {gameMode === GameMode.PVC && aiMessage && <AiChatTooltip message={aiMessage} />}
-                            </div>
-                        </div>
-                        <div className="text-center flex-1">
-                            <p className="text-sm font-medium text-gray-400">GAME TIME</p>
-                            <p className="text-2xl font-bold text-gray-200">{formatTime(gameTime)}</p>
-                        </div>
-                        <div className="flex-1 flex justify-end">
-                            {currentPlayer?.id === opponentPlayer?.id && <TurnTimer turnTime={turnTime} player={currentPlayer} />}
-                        </div>
-                    </div>
-                </header>
-
-                <div className="w-full flex flex-col items-center justify-center py-1 min-h-0">
-                    <div className="h-12 flex items-center justify-center my-1 flex-shrink-0">
-                      {aiThinking ? (
-                         <div className="magical-container p-3 rounded-full flex items-center gap-3 z-10">
-                           <svg className="animate-spin h-5 w-5 text-purple-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                            <span className="font-semibold text-gray-300">{aiPlayerName} is thinking...</span>
-                        </div>
-                      ) : (
-                        currentPlayer && <TurnIndicator player={currentPlayer} />
-                      )}
-                    </div>
-                    <div ref={gameBoardSizerRef} className="w-full flex-1 flex items-center justify-center min-h-0">
-                        <div style={{ width: boardSize > 0 ? `${boardSize}px` : '100%', height: boardSize > 0 ? `${boardSize}px` : '100%' }}>
-                            <GameBoard 
-                                players={players} 
-                                walls={walls}
-                                currentPlayerId={currentPlayerId}
-                                selectedPiece={selectedPiece}
-                                validMoves={validMoves}
-                                isPlacingWall={isPlacingWall}
-                                wallPreview={wallPreview}
-                                onCellClick={handleCellClick}
-                                onWallPreview={handleWallPreview}
-                                onCancelWallPreview={cancelWallPlacement}
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                <footer className="w-full max-w-2xl flex-shrink-0 mx-auto">
-                    <div className="flex justify-between items-center w-full">
-                        <div className="flex-1 flex justify-start">
-                            {currentPlayer?.id === myPlayer?.id && <TurnTimer turnTime={turnTime} player={currentPlayer} />}
-                        </div>
-                        <div className="flex-1" />
-                        <div className="flex-1 flex justify-end">
-                            {myPlayer && <PlayerInfo player={myPlayer} />}
-                        </div>
-                    </div>
-
-                    {wallPreview ? (
-                         <div className="flex w-full space-x-4 mt-4">
-                             <button onClick={withSound(cancelWallPlacement)} className="w-full py-3 rounded-lg font-bold text-white bg-orange-500 button-glow button-glow-orange">Cancel</button>
-                             <button onClick={withSound(confirmWallPlacement)} className="w-full py-3 rounded-lg font-bold text-white bg-green-500 button-glow button-glow-green">Confirm Wall</button>
-                        </div>
-                    ) : (
-                        <div className="flex w-full items-center space-x-4 mt-4">
-                             <button onClick={withSound(togglePlacingWall)} disabled={!currentPlayer || currentPlayer.wallsLeft === 0 || !isMyTurn} className={`w-full h-14 rounded-lg font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed button-glow ${isPlacingWall ? 'bg-orange-500 button-glow-orange' : 'bg-cyan-500 button-glow-cyan'}`}>
-                                {isPlacingWall ? 'Cancel' : 'Place Wall'}
-                             </button>
-                             <button onClick={withSound(() => setShowNewGameConfirm(true))} className="w-full h-14 rounded-lg font-bold text-white bg-fuchsia-600 button-glow button-glow-purple">New Game</button>
-                        </div>
-                    )}
-                </footer>
+                {isPvpMode ? renderPvpLayout() : renderDefaultLayout()}
                 
                 {gameState === GameState.GAME_OVER && winner && (
                     <>
@@ -381,7 +571,7 @@ const App: React.FC = () => {
                             )}
                             { turnTime <= 0 && <p className="text-gray-400 mb-4">The other player ran out of time.</p>}
                             <div className="flex flex-col gap-4 mt-6">
-                               { gameMode !== GameMode.PVO && <button onClick={withSound(() => startGame(gameMode, difficulty, players[1].name, aiType, configuredTurnTime, startPosition, initialWalls))} className="w-full bg-green-500 text-white font-bold py-3 rounded-lg button-glow button-glow-green">Play Again</button>}
+                               { gameMode !== GameMode.PVO && <button onClick={withSound(() => startGame(gameMode, difficulty, players[1].name, players[2].name, aiType, configuredTurnTime, startPosition, initialWalls))} className="w-full bg-green-500 text-white font-bold py-3 rounded-lg button-glow button-glow-green">Play Again</button>}
                                 <button onClick={withSound(returnToMenu)} className="w-full bg-fuchsia-600 text-white font-bold py-3 rounded-lg button-glow button-glow-purple">Main Menu</button>
                             </div>
                         </div>
@@ -422,6 +612,9 @@ const App: React.FC = () => {
                     </div>
                 )}
                 <style>{`
+                    .rotate-180 {
+                        transform: rotate(180deg);
+                    }
                     @keyframes fade-in-down{from{opacity:0;transform:translate(-50%,-20px)}to{opacity:1;transform:translate(-50%,0)}}
                     .animate-fade-in-down{animation:fade-in-down .5s ease-out forwards}
 
@@ -442,6 +635,33 @@ const App: React.FC = () => {
                     .animate-swirl {
                         animation: swirl 2s linear infinite;
                     }
+                    .privacy-policy-content section:not(:last-child) {
+                        padding-bottom: 1.5rem;
+                        margin-bottom: 1.5rem;
+                        border-bottom: 1px solid rgba(192, 38, 211, 0.2);
+                    }
+                    .privacy-policy-content h3 {
+                        font-size: 1.25rem;
+                        font-weight: bold;
+                        color: var(--glow-cyan);
+                        margin-bottom: 1rem;
+                    }
+                    .privacy-policy-content ul {
+                        list-style-type: disc;
+                        list-style-position: inside;
+                        padding-left: 0.5rem;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 0.5rem;
+                    }
+                    .privacy-policy-content a {
+                        color: var(--glow-pink);
+                        text-decoration: underline;
+                    }
+                     .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+                    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                    .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(168, 85, 247, 0.5); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
+                    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(168, 85, 247, 0.8); }
                 `}</style>
             </main>
         </>
@@ -450,20 +670,15 @@ const App: React.FC = () => {
 
 // --- Menu Components ---
 
-const MainMenu: React.FC<{ onNavigate: (screen: 'local_setup' | 'online_setup') => void }> = ({ onNavigate }) => {
-    const [playerName, setPlayerName] = useState('Player 1');
-    
-    useEffect(() => {
-        const storedName = sessionStorage.getItem('playerName');
-        if (storedName) setPlayerName(storedName);
-    }, []);
-
-    const handlePlayerNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newName = e.target.value;
-        setPlayerName(newName);
-        sessionStorage.setItem('playerName', newName);
-    };
-
+const MainMenu: React.FC<{ 
+    playerName: string;
+    onPlayerNameChange: (name: string) => void;
+    onNavigate: (screen: 'local_setup' | 'online_setup') => void;
+    onShowCopyright: () => void;
+    onShowPrivacy: () => void;
+    onShowHelp: () => void;
+    onShowAbout: () => void;
+}> = ({ playerName, onPlayerNameChange, onNavigate, onShowCopyright, onShowPrivacy, onShowHelp, onShowAbout }) => {
     return (
         <div className="space-y-6">
             <div>
@@ -471,14 +686,32 @@ const MainMenu: React.FC<{ onNavigate: (screen: 'local_setup' | 'online_setup') 
                 <p className="text-gray-400 text-center">A strategic game of wits and walls.</p>
             </div>
              <div>
-                 <label htmlFor="playerName" className="text-lg font-semibold mb-2 text-gray-300 block">Your Name</label>
-                 <input type="text" id="playerName" value={playerName} onChange={handlePlayerNameChange} className="w-full p-3 rounded-lg bg-black/30 border-2 border-fuchsia-500/50 focus:outline-none focus:ring-2 focus:ring-fuchsia-400 transition" placeholder="Enter your name" />
+                <label htmlFor="playerName" className="text-lg font-bold text-gray-300 block mb-2 text-left">Your Name</label>
+                <input 
+                    type="text" 
+                    id="playerName" 
+                    value={playerName} 
+                    onChange={(e) => onPlayerNameChange(e.target.value)} 
+                    className="w-full p-3 rounded-lg bg-black/30 border-2 border-fuchsia-500/50 focus:outline-none focus:ring-2 focus:ring-fuchsia-400 transition" 
+                    placeholder="Enter your name" 
+                />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <button onClick={() => onNavigate('local_setup')} className="p-4 rounded-lg font-bold transition-all bg-cyan-500 text-white shadow-lg button-glow button-glow-cyan">Local Game</button>
-                <button onClick={() => onNavigate('online_setup')} className="p-4 rounded-lg font-bold transition-all bg-pink-500 text-white shadow-lg button-glow button-glow-pink">Online Game</button>
+            <div className="flex flex-col gap-4">
+                <button onClick={() => onNavigate('local_setup')} className="w-full p-4 rounded-lg font-bold transition-all bg-cyan-500 text-white shadow-lg button-glow button-glow-cyan">Offline Game</button>
+                <button onClick={() => onNavigate('online_setup')} className="w-full p-4 rounded-lg font-bold transition-all bg-pink-500 text-white shadow-lg button-glow button-glow-pink">Online Game</button>
+                <button onClick={onShowHelp} className="w-full bg-fuchsia-600 text-white font-bold py-3 rounded-lg button-glow button-glow-purple transition-all text-lg">How to Play</button>
             </div>
-            <p className="text-xs text-gray-500 text-center pt-2">Version 3.0</p>
+            
+            <div className="text-center text-xs text-gray-500 pt-2">
+                <p className="mb-2">Version 1.0</p>
+                <div className="flex justify-center items-center flex-wrap gap-x-3 gap-y-1">
+                    <button onClick={onShowPrivacy} className="hover:text-gray-300 transition-colors">Privacy Policy</button>
+                    <span className="text-gray-600" aria-hidden="true">|</span>
+                    <button onClick={onShowCopyright} className="hover:text-gray-300 transition-colors">Copyright Policy</button>
+                    <span className="text-gray-600" aria-hidden="true">|</span>
+                    <button onClick={onShowAbout} className="hover:text-gray-300 transition-colors">About Me</button>
+                </div>
+            </div>
         </div>
     );
 };
@@ -585,12 +818,14 @@ const SetupButton: React.FC<{active: boolean, onClick: ()=>void, children: React
     return <button onClick={onClick} className={`w-full p-3 rounded-lg font-bold transition-all button-glow ${activeClass}`}>{children}</button>
 };
 
-const LocalGameSetup: React.FC<{ playerName: string; onStartGame: Function; onBack: () => void; setShowComingSoon: (show: boolean) => void; }> = (props) => {
+const LocalGameSetup: React.FC<{ playerName: string; onStartGame: Function; onBack: () => void; onShowComingSoon: () => void; }> = (props) => {
     const [mode, setMode] = useState<GameMode>(GameMode.PVC);
     const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.MEDIUM);
+    const [aiType] = useState<AiType>(AiType.LOCAL); // Gemini is coming soon
     const [startPos, setStartPos] = useState<StartPosition>(StartPosition.CENTER);
     const [duration, setDuration] = useState(60);
     const [walls, setWalls] = useState(10);
+    const [p2Name, setP2Name] = useState('Player 2');
     const minTime = 30;
 
     const withSound = (onClick: (...args: any[]) => void) => {
@@ -600,23 +835,39 @@ const LocalGameSetup: React.FC<{ playerName: string; onStartGame: Function; onBa
         };
     };
 
+    const handleStartGame = () => {
+        props.onStartGame(mode, difficulty, props.playerName || 'Player 1', p2Name || 'Player 2', aiType, duration, startPos, walls);
+    };
+
     useEffect(() => { if (duration < minTime) setDuration(minTime); }, [duration, minTime]);
 
     return (
       <div className="space-y-4 animate-fade-in-down">
           <BackButton onClick={props.onBack} />
           <h2 className="text-2xl font-bold text-center text-white pt-8">Local Game Setup</h2>
+          
           <div className="flex gap-4">
               <SetupButton active={mode === GameMode.PVP} onClick={withSound(() => setMode(GameMode.PVP))} color="cyan">Player vs Player</SetupButton>
               <SetupButton active={mode === GameMode.PVC} onClick={withSound(() => setMode(GameMode.PVC))} color="pink">Player vs AI</SetupButton>
           </div>
+          
+          {mode === GameMode.PVP && (
+            <div className="animate-fade-in-down space-y-3">
+                <p className="font-semibold text-gray-300 block">Player 1: <span className="text-white font-bold">{props.playerName || 'Player 1'}</span></p>
+                <div>
+                  <label htmlFor="p2Name" className="font-semibold text-gray-300 block mb-2">Player 2 Name</label>
+                  <input type="text" id="p2Name" value={p2Name} onChange={(e) => setP2Name(e.target.value)} className="w-full p-3 rounded-lg bg-black/30 border-2 border-fuchsia-500/50 focus:outline-none focus:ring-2 focus:ring-fuchsia-400 transition" placeholder="Enter Player 2 name" />
+                </div>
+            </div>
+          )}
+
           {mode === GameMode.PVC && (
               <div className="space-y-4 p-4 bg-black/20 rounded-lg">
                   <div>
                       <h3 className="font-semibold text-gray-300 mb-2">AI Type</h3>
                       <div className="flex gap-4">
                           <SetupButton active={true} onClick={() => {}} color="dark">Local (Offline)</SetupButton>
-                          <SetupButton active={false} onClick={() => props.setShowComingSoon(true)} color="fuchsia">Gemini AI</SetupButton>
+                          <SetupButton active={false} onClick={props.onShowComingSoon} color="fuchsia">Gemini AI</SetupButton>
                       </div>
                   </div>
                   <div>
@@ -643,7 +894,7 @@ const LocalGameSetup: React.FC<{ playerName: string; onStartGame: Function; onBa
               <input type="number" id="turnTime" value={duration} min={minTime} step="15" onChange={(e) => setDuration(Math.max(minTime, Number(e.target.value)))} className="w-full p-3 rounded-lg bg-black/30 border border-fuchsia-500/50" />
               <p className="text-xs text-gray-400 mt-1">Minimum: {minTime} seconds.</p>
           </div>
-          <button onClick={() => props.onStartGame(mode, difficulty, props.playerName, AiType.LOCAL, duration, startPos, walls)} className="w-full bg-green-500 text-white font-bold py-4 rounded-lg button-glow button-glow-green text-xl">Start Game</button>
+          <button onClick={handleStartGame} className="w-full bg-green-500 text-white font-bold py-4 rounded-lg button-glow button-glow-green text-xl">Start Game</button>
       </div>
     );
 }

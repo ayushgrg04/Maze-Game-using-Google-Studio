@@ -166,12 +166,13 @@ const GameBoard: React.FC<GameBoardProps> = ({
   return (
     <div className="w-full h-full p-2 bg-black/20 rounded-2xl shadow-lg border border-purple-500/30">
       <div
-        className="relative grid h-full w-full"
+        className="relative grid h-full w-full border-2 border-purple-500/40 rounded-lg"
         style={{
           gridTemplateColumns: `repeat(${BOARD_SIZE}, 1fr)`,
           gridTemplateRows: `repeat(${BOARD_SIZE}, 1fr)`,
           gap: `${GRID_GAP}px`,
           background: 'radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, rgba(0,0,0,0) 70%)',
+          boxShadow: '0 0 10px rgba(192, 38, 211, 0.3), inset 0 0 10px rgba(192, 38, 211, 0.2)',
         }}
       >
         <div 
