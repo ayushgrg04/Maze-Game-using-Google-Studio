@@ -23,27 +23,7 @@ const ASSETS_TO_CACHE = [
     '/sounds/emoji-love.mp3',
     '/sounds/emoji-angry.mp3',
     '/sounds/emoji-waiting.mp3',
-    '/home-page-background.png',
-    // Add all source files that will be fetched by the browser
-    '/index.tsx',
-    '/App.tsx',
-    '/types.ts',
-    '/constants.ts',
-    '/services/geminiService.ts',
-    '/services/localAiService.ts',
-    '/services/onlineService.ts',
-    '/services/authService.ts',
-    '/services/soundService.ts',
-    '/hooks/useGameLogic.ts',
-    '/utils/pathfinding.ts',
-    '/components/Modal.tsx',
-    '/components/PlayerInfo.tsx',
-    '/components/GameBoard.tsx',
-    '/components/AiChatTooltip.tsx',
-    '/components/WallPlacementGuide.tsx',
-    '/components/HelpModal.tsx',
-    '/components/GoogleSignInModal.tsx',
-    '/components/AnimatedMenuBackground.tsx'
+    '/home-page-background.png'
 ];
 
 // Install event: cache the application shell and take control immediately
@@ -53,7 +33,7 @@ self.addEventListener('install', event => {
             .then(cache => {
                 console.log('Service Worker: Caching App Shell');
                 // Use a separate addAll for critical path, and allow non-critical to fail gracefully
-                const criticalAssets = ['/', '/index.html', '/index.tsx', '/App.tsx'];
+                const criticalAssets = ['/', '/index.html'];
                 cache.addAll(criticalAssets);
                 return cache.addAll(ASSETS_TO_CACHE).catch(error => {
                     console.warn('Service Worker: Caching non-critical assets failed, but proceeding.', error);
