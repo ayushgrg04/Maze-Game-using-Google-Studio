@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameLogic } from './hooks/useGameLogic';
 import GameBoard from './components/GameBoard';
@@ -18,8 +19,8 @@ const EmojiPlate: React.FC<{
 }> = ({ onSelect }) => {
   return (
     <div className="flex-1 min-w-0 px-2 sm:px-4">
-        {/* On small screens, this is a horizontally scrollable list. On larger screens (sm+), it becomes a centered, non-scrolling row. */}
-        <div className="flex items-center justify-center space-x-1 sm:space-x-2 py-1 overflow-x-auto sm:overflow-x-visible sm:flex-wrap custom-scrollbar-horizontal snap-x sm:snap-none">
+        {/* On small screens, this is a scrollable list. On wider screens, it's a centered row. */}
+        <div className="flex items-center justify-start sm:justify-center space-x-1 sm:space-x-2 py-1 overflow-x-auto sm:overflow-x-visible custom-scrollbar-horizontal snap-x">
             {EMOJIS.map(emoji => (
                 <button
                   key={emoji}
@@ -314,6 +315,81 @@ const App: React.FC = () => {
             }, 500); // Match CSS transition time
         }
     }, []);
+    
+    // Back button handling logic
+    useEffect(() => {
+        const handlePopState = (e: PopStateEvent) => {
+            e.preventDefault();
+
+            // The logic for what to do on back button press
+            // Order is important: from most specific (modal) to most general (game state)
+            if (showNewGameConfirm) { setShowNewGameConfirm(false); return; }
+            if (showRateLimitModal) { setShowRateLimitModal(false); return; }
+            if (showHelp) { setShowHelp(false); return; }
+            if (showCopyrightModal) { setShowCopyrightModal(false); return; }
+            if (showPrivacyModal) { setShowPrivacyModal(false); return; }
+            if (showAboutModal) { setShowAboutModal(false); return; }
+            if (showComingSoonModal) { setShowComingSoonModal(false); return; }
+            if (isJoiningGame) { cancelJoinAttempt(); return; }
+            if (pendingJoinId) { cancelJoin(); return; }
+
+            if (gameState === GameState.ONLINE_WAITING) {
+                if (onlineFlow === 'find') handleCancelFindMatch();
+                else if (onlineFlow === 'create') handleCancelCreateGame();
+                return;
+            }
+
+            if (gameState === GameState.PLAYING) {
+                setShowNewGameConfirm(true);
+                return;
+            }
+            
+            if (gameState === GameState.GAME_OVER) {
+                returnToMenu();
+                return;
+            }
+
+            if (gameState === GameState.MENU && menuScreen !== 'main') {
+                setMenuScreen('main');
+                return;
+            }
+            
+            // If we've handled all our states, allow the browser to go back (e.g., exit the app).
+            window.history.back();
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => {
+          window.removeEventListener('popstate', handlePopState);
+        };
+    }, [
+        // State values to determine current context
+        gameState, menuScreen, onlineFlow,
+        showNewGameConfirm, showRateLimitModal, showHelp, showCopyrightModal, showPrivacyModal, showAboutModal, showComingSoonModal,
+        isJoiningGame, pendingJoinId,
+        // Handler functions (should be stable via useCallback in useGameLogic)
+        returnToMenu, handleCancelFindMatch, handleCancelCreateGame, cancelJoinAttempt, cancelJoin
+    ]);
+
+    useEffect(() => {
+        // This effect manages the history stack to enable back button interception.
+        const shouldCapture = 
+            gameState !== GameState.MENU || 
+            menuScreen !== 'main' || 
+            showHelp || showCopyrightModal || showPrivacyModal || showAboutModal || showComingSoonModal || 
+            showNewGameConfirm || showRateLimitModal || 
+            isJoiningGame || pendingJoinId;
+        
+        // When entering a state we want to control, push a new history entry.
+        // This ensures the 'popstate' event will fire on the next back button press.
+        if (shouldCapture) {
+            // Check if our state is already on top to avoid multiple pushes for the same screen.
+            if (!window.history.state || !window.history.state.mazeMagicState) {
+                window.history.pushState({ mazeMagicState: true }, '');
+            }
+        }
+    }, [gameState, menuScreen, showHelp, showCopyrightModal, showPrivacyModal, showAboutModal, showComingSoonModal, showNewGameConfirm, showRateLimitModal, isJoiningGame, pendingJoinId]);
+
 
     useEffect(() => {
         if (showPrivacyModal) {
@@ -636,7 +712,7 @@ const App: React.FC = () => {
             {/* PLAYER 1 (BOTTOM) AREA */}
             <footer className="w-full max-w-2xl flex-shrink-0 mx-auto">
                 <div className="flex justify-between items-center w-full">
-                    <div className="flex-1 flex justify-start">
+                    <div className="flex-shrink-0">
                         {player1 && <TurnTimer currentTime={turnTime} initialTime={configuredTurnTime} player={player1} isActive={currentPlayer?.id === player1.id} />}
                     </div>
                     {gameMode === GameMode.PVO && player1 && (
@@ -644,7 +720,7 @@ const App: React.FC = () => {
                             onSelect={withSound((emoji: string) => handleSendEmoji(emoji, onlinePlayerId ?? 1))}
                         />
                     )}
-                    <div className="flex-1 flex justify-end relative">
+                    <div className="flex-shrink-0 relative">
                         {player1 && <PlayerInfo player={player1} />}
                     </div>
                 </div>
@@ -668,16 +744,20 @@ const App: React.FC = () => {
 
     // PvP Layout - Symmetrical and Static
     const renderPvpLayout = () => (
-         <>
+         <div className="w-full h-full flex flex-col">
             {/* PLAYER 2 (TOP) HUB */}
             <header className="w-full max-w-2xl flex-shrink-0 mx-auto rotate-180">
                 <div className="space-y-2">
-                    <div className="flex justify-between items-center w-full">
-                        <PlayerInfo player={player2} reverse size="sm" />
+                    <div className="flex items-center w-full space-x-2">
+                        <div className="flex-shrink-0">
+                           <PlayerInfo player={player2} reverse size="sm" />
+                        </div>
                         <EmojiPlate
                             onSelect={withSound((emoji: string) => handleSendEmoji(emoji, 2))}
                         />
-                        <TurnTimer currentTime={turnTime} initialTime={configuredTurnTime} player={player2} isActive={currentPlayerId === 2} size="sm" />
+                        <div className="flex-shrink-0">
+                           <TurnTimer currentTime={turnTime} initialTime={configuredTurnTime} player={player2} isActive={currentPlayerId === 2} size="sm" />
+                        </div>
                     </div>
                      <ActionButtons
                         isMyTurn={currentPlayerId === 2}
@@ -693,8 +773,8 @@ const App: React.FC = () => {
             </header>
 
             {/* CENTRAL AREA */}
-            <div className="w-full flex flex-col items-center justify-center py-1 min-h-0">
-                <div className="magical-container rounded-full px-3 py-1 my-1 flex items-center justify-between w-full max-w-xs mx-auto">
+            <div className="w-full flex flex-col items-center justify-center py-1 min-h-0 flex-1">
+                <div className="magical-container rounded-full px-3 py-1 my-1 flex items-center justify-between w-full max-w-xs mx-auto flex-shrink-0">
                     <div className="text-center">
                         <p className="text-xs font-medium text-gray-400">TIME</p>
                         <p className="text-lg font-bold text-gray-200">{formatTime(gameTime)}</p>
@@ -720,12 +800,16 @@ const App: React.FC = () => {
             {/* PLAYER 1 (BOTTOM) HUB */}
             <footer className="w-full max-w-2xl flex-shrink-0 mx-auto">
                  <div className="space-y-2">
-                    <div className="flex justify-between items-center w-full">
-                        <TurnTimer currentTime={turnTime} initialTime={configuredTurnTime} player={player1} isActive={currentPlayerId === 1} size="sm" />
+                    <div className="flex items-center w-full space-x-2">
+                        <div className="flex-shrink-0">
+                           <TurnTimer currentTime={turnTime} initialTime={configuredTurnTime} player={player1} isActive={currentPlayerId === 1} size="sm" />
+                        </div>
                         <EmojiPlate
                             onSelect={withSound((emoji: string) => handleSendEmoji(emoji, 1))}
                         />
-                        <PlayerInfo player={player1} size="sm" />
+                        <div className="flex-shrink-0">
+                           <PlayerInfo player={player1} size="sm" />
+                        </div>
                     </div>
                     <ActionButtons
                         isMyTurn={currentPlayerId === 1}
@@ -739,14 +823,18 @@ const App: React.FC = () => {
                     />
                 </div>
             </footer>
-        </>
+        </div>
     );
 
     return (
         <>
             <MuteButton isMuted={isMuted} onClick={withSound(handleToggleMute)} />
-            <main className={`h-screen max-h-[100dvh] w-full grid grid-rows-[auto_1fr_auto] p-2 sm:p-4 bg-gradient-to-b from-[var(--dark-bg-start)] to-[var(--dark-bg-end)] overflow-hidden`}>
-                {isPvpMode ? renderPvpLayout() : renderDefaultLayout()}
+            <main className={`h-screen max-h-[100dvh] w-full flex flex-col p-2 sm:p-4 bg-gradient-to-b from-[var(--dark-bg-start)] to-[var(--dark-bg-end)] overflow-hidden`}>
+                {isPvpMode ? renderPvpLayout() : (
+                    <div className="w-full h-full grid grid-rows-[auto_1fr_auto]">
+                        {renderDefaultLayout()}
+                    </div>
+                )}
                 
                 {(gameMode === GameMode.PVP || gameMode === GameMode.PVO) && travelingEmoji && (
                     <TravelingEmoji key={travelingEmoji.key} emoji={travelingEmoji.emoji} fromPlayerId={travelingEmoji.fromPlayerId} localPlayerId={onlinePlayerId} gameMode={gameMode} />
