@@ -1,5 +1,4 @@
 
-
 import React, { useRef } from 'react';
 import { BOARD_SIZE } from '../constants';
 import type { Player, Position, Wall } from '../types';
@@ -129,36 +128,6 @@ const GameBoard: React.FC<GameBoardProps> = ({
     }
   };
   
-  const handleBoardClick = (e: React.MouseEvent) => {
-    if (isPlacingWall || boardPixelSize === 0) return;
-
-    const board = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - board.left;
-    const y = e.clientY - board.top;
-
-    const cellSize = (boardPixelSize - (BOARD_SIZE - 1) * GRID_GAP) / BOARD_SIZE;
-    const totalBlockSize = cellSize + GRID_GAP;
-
-    const r = Math.floor(y / totalBlockSize);
-    const c = Math.floor(x / totalBlockSize);
-
-    // Check if click was within a cell, not the gap
-    const xInBlock = x % totalBlockSize;
-    const yInBlock = y % totalBlockSize;
-    if (xInBlock > cellSize || yInBlock > cellSize) {
-        // Click was in the grid gap, ignore it for piece movement.
-        return;
-    }
-
-    if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
-        const clickedPos = { r, c };
-        const isMoveValid = validMoves.some(move => move.r === clickedPos.r && move.c === clickedPos.c);
-        if (isMoveValid) {
-            onCellClick(clickedPos);
-        }
-    }
-  };
-
   const renderCell = (r: number, c: number) => {
     const player1 = players[1];
     const player2 = players[2];
@@ -178,8 +147,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
     const cellClasses = [
       'relative aspect-square rounded-sm transition-colors duration-300',
-      'bg-black/10',
-      isValidMove ? 'cursor-pointer hover:bg-white/10' : '',
+      'bg-black/10 hover:bg-white/10',
+      isValidMove ? 'cursor-pointer' : '',
     ].join(' ');
 
     const playerPiece = (player: Player, isSelectedFlag: boolean) => (
@@ -206,6 +175,12 @@ const GameBoard: React.FC<GameBoardProps> = ({
         key={`cell-${r}-${c}`}
         className={cellClasses}
         style={goalStyle}
+        onClick={() => {
+          if (isPlacingWall) return;
+          if (isValidMove) {
+            onCellClick({ r, c });
+          }
+        }}
         aria-label={`Cell ${r}, ${c}`}
       >
         {isPlayer1Here && playerPiece(players[1], isSelected && 1 === currentPlayerId)}
@@ -298,7 +273,6 @@ const GameBoard: React.FC<GameBoardProps> = ({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
-        onClick={handleBoardClick}
       >
         <div 
           className="absolute inset-0 grid pointer-events-none"

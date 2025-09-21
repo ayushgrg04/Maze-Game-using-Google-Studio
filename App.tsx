@@ -316,20 +316,19 @@ const App: React.FC = () => {
         }
     }, []);
     
-    // --- Comprehensive Back Button Logic ---
+    // Back button handling logic
     useEffect(() => {
-        const handlePopState = (event: PopStateEvent) => {
-            // Prevent the browser's default back navigation
-            event.preventDefault();
+        const handlePopState = (e: PopStateEvent) => {
+            e.preventDefault();
 
-            // This logic determines what "back" means in the current app context.
-            // The order of checks is important, from most specific to most general.
+            // The logic for what to do on back button press
+            // Order is important: from most specific (modal) to most general (game state)
+            if (showNewGameConfirm) { setShowNewGameConfirm(false); return; }
+            if (showRateLimitModal) { setShowRateLimitModal(false); return; }
+            if (showHelp) { setShowHelp(false); return; }
             if (showCopyrightModal) { setShowCopyrightModal(false); return; }
             if (showPrivacyModal) { setShowPrivacyModal(false); return; }
             if (showAboutModal) { setShowAboutModal(false); return; }
-            if (showHelp) { setShowHelp(false); return; }
-            if (showRateLimitModal) { setShowRateLimitModal(false); return; }
-            if (showNewGameConfirm) { setShowNewGameConfirm(false); return; }
             if (showComingSoonModal) { setShowComingSoonModal(false); return; }
             if (isJoiningGame) { cancelJoinAttempt(); return; }
             if (pendingJoinId) { cancelJoin(); return; }
@@ -341,7 +340,7 @@ const App: React.FC = () => {
             }
 
             if (gameState === GameState.PLAYING) {
-                setShowNewGameConfirm(true); // Show "are you sure?" modal
+                setShowNewGameConfirm(true);
                 return;
             }
             
@@ -355,51 +354,41 @@ const App: React.FC = () => {
                 return;
             }
             
-            // If none of the above conditions are met, it means we are at the main menu.
-            // In this case, we can allow the app to be exited by the user.
-            // We call history.back() to actually perform the navigation that was prevented.
+            // If we've handled all our states, allow the browser to go back (e.g., exit the app).
             window.history.back();
         };
 
         window.addEventListener('popstate', handlePopState);
-
         return () => {
           window.removeEventListener('popstate', handlePopState);
         };
     }, [
-        // Include all state variables that the back handler depends on
+        // State values to determine current context
         gameState, menuScreen, onlineFlow,
-        showNewGameConfirm, showRateLimitModal, showHelp, showCopyrightModal, 
-        showPrivacyModal, showAboutModal, showComingSoonModal,
+        showNewGameConfirm, showRateLimitModal, showHelp, showCopyrightModal, showPrivacyModal, showAboutModal, showComingSoonModal,
         isJoiningGame, pendingJoinId,
-        // Include all handler functions to ensure they are not stale
-        returnToMenu, handleCancelFindMatch, handleCancelCreateGame, 
-        cancelJoinAttempt, cancelJoin
+        // Handler functions (should be stable via useCallback in useGameLogic)
+        returnToMenu, handleCancelFindMatch, handleCancelCreateGame, cancelJoinAttempt, cancelJoin
     ]);
 
     useEffect(() => {
-        // This effect manages the browser's history stack to enable back button interception.
-        // We determine if the current state is one we want to "capture".
-        const isMainMenu = gameState === GameState.MENU && menuScreen === 'main';
-        const areAnyModalsOpen = showHelp || showCopyrightModal || showPrivacyModal || 
-                                showAboutModal || showComingSoonModal || showNewGameConfirm || 
-                                showRateLimitModal || isJoiningGame || pendingJoinId;
-
-        const shouldCaptureBackButton = !isMainMenu || areAnyModalsOpen;
+        // This effect manages the history stack to enable back button interception.
+        const shouldCapture = 
+            gameState !== GameState.MENU || 
+            menuScreen !== 'main' || 
+            showHelp || showCopyrightModal || showPrivacyModal || showAboutModal || showComingSoonModal || 
+            showNewGameConfirm || showRateLimitModal || 
+            isJoiningGame || pendingJoinId;
         
-        // If we should capture the back button and there's no custom state on the history entry,
-        // push a new entry. This allows our `popstate` listener to trigger next time.
-        if (shouldCaptureBackButton) {
+        // When entering a state we want to control, push a new history entry.
+        // This ensures the 'popstate' event will fire on the next back button press.
+        if (shouldCapture) {
+            // Check if our state is already on top to avoid multiple pushes for the same screen.
             if (!window.history.state || !window.history.state.mazeMagicState) {
                 window.history.pushState({ mazeMagicState: true }, '');
             }
         }
-    }, [
-        // This effect should run whenever a state that affects navigation changes.
-        gameState, menuScreen, showHelp, showCopyrightModal, showPrivacyModal, 
-        showAboutModal, showComingSoonModal, showNewGameConfirm, showRateLimitModal, 
-        isJoiningGame, pendingJoinId
-    ]);
+    }, [gameState, menuScreen, showHelp, showCopyrightModal, showPrivacyModal, showAboutModal, showComingSoonModal, showNewGameConfirm, showRateLimitModal, isJoiningGame, pendingJoinId]);
 
 
     useEffect(() => {
