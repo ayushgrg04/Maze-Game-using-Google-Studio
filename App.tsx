@@ -20,13 +20,13 @@ const EmojiPlate: React.FC<{ onSelect: (emoji: string) => void; enabled: boolean
   };
 
   return (
-    <div className={`flex items-center justify-center gap-1 sm:gap-2 magical-container rounded-full p-1 transition-opacity ${!enabled ? 'opacity-50 ' : ''}`}>
+    <div className={`flex items-center justify-center gap-0 sm:gap-1 magical-container rounded-full p-1 transition-opacity ${!enabled ? 'opacity-50 ' : ''}`}>
       {EMOJIS.map(emoji => (
         <button
           key={emoji}
           onClick={() => handleSelect(emoji)}
           disabled={!enabled}
-          className="text-lg sm:text-2xl p-1 rounded-full hover:bg-white/20 transition-transform hover:scale-125 focus:outline-none focus:ring-2 focus:ring-purple-400 disabled:cursor-not-allowed"
+          className="text-base sm:text-2xl p-1 rounded-full hover:bg-white/20 transition-transform hover:scale-125 focus:outline-none focus:ring-2 focus:ring-purple-400 disabled:cursor-not-allowed"
           aria-label={`Send ${emoji} emoji`}
         >
           {emoji}
@@ -108,7 +108,7 @@ const TurnTimer: React.FC<{
 }> = ({ currentTime, initialTime, player, isActive, size = 'md' }) => {
     const timeToDisplay = isActive ? currentTime : initialTime;
     
-    const containerClasses = size === 'sm' ? "rounded-xl p-2 text-center w-28" : "rounded-xl p-3 text-center w-32";
+    const containerClasses = size === 'sm' ? "rounded-xl p-2 text-center" : "rounded-xl p-3 text-center";
     const labelClasses = size === 'sm' ? "text-[10px] font-medium text-gray-400 uppercase tracking-wider" : "text-xs font-medium text-gray-400 uppercase tracking-wider";
     const timeTextBaseClasses = size === 'sm' ? "text-xl font-bold" : "text-2xl font-bold";
     
