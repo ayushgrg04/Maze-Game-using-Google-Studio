@@ -1,4 +1,5 @@
 
+
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { BOARD_SIZE } from '../constants';
 // Removed static import: import getAiMove from '../services/geminiService';
@@ -262,10 +263,10 @@ const useGameLogic = () => {
 
   const untransformWall = transformWall; // This is also its own inverse
 
-  const updateStateFromOnline = useCallback((data: OnlineGameData) => {
-      // Guard against stale updates. This is crucial for preventing timers
-      // from being reset by old data, especially from polling.
-      if (data.timestamp <= lastStateTimestampRef.current) {
+  const updateStateFromOnline = useCallback((data: OnlineGameData, isOptimistic: boolean = false) => {
+      // For optimistic updates, we always apply them to ensure responsiveness.
+      // For network updates, we guard against stale data to prevent desync.
+      if (!isOptimistic && data.timestamp <= lastStateTimestampRef.current) {
         return;
       }
 
@@ -315,7 +316,7 @@ const useGameLogic = () => {
         if (gameMode === GameMode.PVO && onlineGameId && onlinePlayerId) {
             const currentState: OnlineGameData = { players, walls, currentPlayerId, winner, gameTime, turnTime, timestamp: lastStateTimestamp };
             const nextState = applyActionToState(currentState, { type: 'MOVE', to: realTo }, onlinePlayerId);
-            updateStateFromOnline(nextState); // Optimistic local update
+            updateStateFromOnline(nextState, true); // Optimistic local update
             onlineService.publishGameState(onlineGameId, nextState);
         } else {
             const updatedPlayers = { ...players };
@@ -351,7 +352,7 @@ const useGameLogic = () => {
     if(gameMode === GameMode.PVO && onlineGameId && onlinePlayerId) {
         const currentState: OnlineGameData = { players, walls, currentPlayerId, winner, gameTime, turnTime, timestamp: lastStateTimestamp };
         const nextState = applyActionToState(currentState, { type: 'PLACE_WALL', wall: realWall }, onlinePlayerId);
-        updateStateFromOnline(nextState); // Optimistic local update
+        updateStateFromOnline(nextState, true); // Optimistic local update
         onlineService.publishGameState(onlineGameId, nextState);
     } else {
       setWalls(prev => [...prev, newWall]);
@@ -592,7 +593,7 @@ const useGameLogic = () => {
             
             // We update locally and publish the result regardless of whose turn it was.
             // This prevents desync if one player disconnects.
-            updateStateFromOnline(nextState);
+            updateStateFromOnline(nextState, true);
             onlineService.publishGameState(onlineGameId, nextState);
         }
     } else {
