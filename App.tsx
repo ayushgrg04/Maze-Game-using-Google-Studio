@@ -13,28 +13,29 @@ import { soundService, Sound } from './services/soundService';
 
 const EMOJIS = ['😂', '🤔', '🤯', '😎', '👋', '❤️', '😡', '⏳'];
 
-const EmojiPlate: React.FC<{ onSelect: (emoji: string) => void; enabled: boolean; }> = ({ onSelect, enabled }) => {
-  const handleSelect = (emoji: string) => {
-    if (!enabled) return;
-    onSelect(emoji);
-  };
-
+const EmojiPlate: React.FC<{
+  onSelect: (emoji: string) => void;
+}> = ({ onSelect }) => {
   return (
-    <div className={`flex items-center justify-center gap-0 sm:gap-1 magical-container rounded-full p-1 transition-opacity ${!enabled ? 'opacity-50 ' : ''}`}>
-      {EMOJIS.map(emoji => (
-        <button
-          key={emoji}
-          onClick={() => handleSelect(emoji)}
-          disabled={!enabled}
-          className="text-base sm:text-2xl p-1 rounded-full hover:bg-white/20 transition-transform hover:scale-125 focus:outline-none focus:ring-2 focus:ring-purple-400 disabled:cursor-not-allowed"
-          aria-label={`Send ${emoji} emoji`}
-        >
-          {emoji}
-        </button>
-      ))}
+    <div className="flex-1 min-w-0 px-2 sm:px-4">
+        {/* On small screens, this is a horizontally scrollable list. On larger screens (sm+), it becomes a centered, non-scrolling row. */}
+        <div className="flex items-center justify-center space-x-1 sm:space-x-2 py-1 overflow-x-auto sm:overflow-x-visible sm:flex-wrap custom-scrollbar-horizontal snap-x sm:snap-none">
+            {EMOJIS.map(emoji => (
+                <button
+                  key={emoji}
+                  onClick={() => onSelect(emoji)}
+                  // The button is always enabled, allowing players to send emojis at any time.
+                  className="snap-center flex-shrink-0 w-10 h-10 flex items-center justify-center text-xl sm:text-2xl rounded-lg hover:bg-white/20 transition-transform hover:scale-125 focus:outline-none focus:ring-2 ring-offset-2 ring-offset-transparent ring-purple-400"
+                  aria-label={`Send ${emoji} emoji`}
+                >
+                  {emoji}
+                </button>
+            ))}
+        </div>
     </div>
   );
 };
+
 
 const TravelingEmoji: React.FC<{
     emoji: string;
@@ -638,9 +639,11 @@ const App: React.FC = () => {
                     <div className="flex-1 flex justify-start">
                         {player1 && <TurnTimer currentTime={turnTime} initialTime={configuredTurnTime} player={player1} isActive={currentPlayer?.id === player1.id} />}
                     </div>
-                    <div className="flex-shrink-0 px-2">
-                        {gameMode === GameMode.PVO && <EmojiPlate onSelect={(emoji) => handleSendEmoji(emoji)} enabled={true} />}
-                    </div>
+                    {gameMode === GameMode.PVO && player1 && (
+                        <EmojiPlate
+                            onSelect={withSound((emoji: string) => handleSendEmoji(emoji, onlinePlayerId ?? 1))}
+                        />
+                    )}
                     <div className="flex-1 flex justify-end relative">
                         {player1 && <PlayerInfo player={player1} />}
                     </div>
@@ -671,7 +674,9 @@ const App: React.FC = () => {
                 <div className="space-y-2">
                     <div className="flex justify-between items-center w-full">
                         <PlayerInfo player={player2} reverse size="sm" />
-                        <EmojiPlate onSelect={(emoji) => handleSendEmoji(emoji, 2)} enabled={true} />
+                        <EmojiPlate
+                            onSelect={withSound((emoji: string) => handleSendEmoji(emoji, 2))}
+                        />
                         <TurnTimer currentTime={turnTime} initialTime={configuredTurnTime} player={player2} isActive={currentPlayerId === 2} size="sm" />
                     </div>
                      <ActionButtons
@@ -717,7 +722,9 @@ const App: React.FC = () => {
                  <div className="space-y-2">
                     <div className="flex justify-between items-center w-full">
                         <TurnTimer currentTime={turnTime} initialTime={configuredTurnTime} player={player1} isActive={currentPlayerId === 1} size="sm" />
-                        <EmojiPlate onSelect={(emoji) => handleSendEmoji(emoji, 1)} enabled={true} />
+                        <EmojiPlate
+                            onSelect={withSound((emoji: string) => handleSendEmoji(emoji, 1))}
+                        />
                         <PlayerInfo player={player1} size="sm" />
                     </div>
                     <ActionButtons
@@ -744,7 +751,7 @@ const App: React.FC = () => {
                 {(gameMode === GameMode.PVP || gameMode === GameMode.PVO) && travelingEmoji && (
                     <TravelingEmoji key={travelingEmoji.key} emoji={travelingEmoji.emoji} fromPlayerId={travelingEmoji.fromPlayerId} localPlayerId={onlinePlayerId} gameMode={gameMode} />
                 )}
-
+                
                 {isJoiningGame && (
                     <Modal title="Joining Game..." onClose={withSound(cancelJoinAttempt)}>
                         <div className="text-center space-y-4">
@@ -885,6 +892,10 @@ const App: React.FC = () => {
                     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
                     .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(168, 85, 247, 0.5); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
                     .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: rgba(168, 85, 247, 0.8); }
+                    .custom-scrollbar-horizontal::-webkit-scrollbar { height: 4px; }
+                    .custom-scrollbar-horizontal::-webkit-scrollbar-track { background: transparent; }
+                    .custom-scrollbar-horizontal::-webkit-scrollbar-thumb { background-color: rgba(168, 85, 247, 0.4); border-radius: 2px; }
+                    .custom-scrollbar-horizontal::-webkit-scrollbar-thumb:hover { background-color: rgba(168, 85, 247, 0.7); }
                 `}</style>
             </main>
         </>
