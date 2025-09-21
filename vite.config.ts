@@ -11,8 +11,8 @@ export default defineConfig({
     // The vite-plugin-static-copy is no longer needed as Vite will handle the public directory automatically.
   ],
   define: {
-    // This makes the process.env.API_KEY variable available in the client-side code.
+    // This makes the process.env.GEMINI_API_KEY variable available in the client-side code.
     // The value is injected at build time by the build environment (e.g., Netlify).
-    'process.env.API_KEY': JSON.stringify(process.env.API_KEY)
+    'process.env.GEMINI_API_KEY': JSON.stringify(process.env.GEMINI_API_KEY)
   }
 })
