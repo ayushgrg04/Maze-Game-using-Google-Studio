@@ -4,7 +4,7 @@ import { Difficulty } from '../types';
 import type { Player, Wall, AiAction } from '../types';
 
 // Per coding guidelines, initialize the AI client with an API key from environment variables.
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const getAiMove = async (
   players: { [key: number]: Player },
