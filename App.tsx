@@ -689,7 +689,7 @@ const App: React.FC = () => {
             </header>
 
             {/* GAME BOARD (MIDDLE) AREA */}
-            <div className="w-full flex flex-col items-center justify-center py-1 min-h-0">
+            <div className="w-full flex flex-col items-center justify-center py-1 min-h-0 flex-1">
                 <div className="h-12 flex items-center justify-center my-1 flex-shrink-0">
                     {aiThinking ? (
                         <div className="magical-container p-3 rounded-full flex items-center gap-3 z-10">
@@ -831,7 +831,7 @@ const App: React.FC = () => {
             <MuteButton isMuted={isMuted} onClick={withSound(handleToggleMute)} />
             <main className={`h-screen max-h-[100dvh] w-full flex flex-col p-2 sm:p-4 bg-gradient-to-b from-[var(--dark-bg-start)] to-[var(--dark-bg-end)] overflow-hidden`}>
                 {isPvpMode ? renderPvpLayout() : (
-                    <div className="w-full h-full grid grid-rows-[auto_1fr_auto]">
+                    <div className="w-full h-full flex flex-col">
                         {renderDefaultLayout()}
                     </div>
                 )}
