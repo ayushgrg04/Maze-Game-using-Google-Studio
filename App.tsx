@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameLogic } from './hooks/useGameLogic';
 import GameBoard from './components/GameBoard';
@@ -308,6 +305,17 @@ const App: React.FC = () => {
     useEffect(() => {
         soundService.init(); // Initialize the sound service and preload sounds
 
+        // Lock screen orientation to portrait where supported
+        // FIX: Cast screen.orientation to `any` to allow access to the `lock` method,
+        // which may not be in all TypeScript DOM library versions.
+        // The existence of the method is checked at runtime.
+        if (window.screen.orientation && (window.screen.orientation as any).lock) {
+            (window.screen.orientation as any).lock('portrait').catch((error: any) => {
+                // This is expected on desktop browsers, so a warning is sufficient.
+                console.warn("Could not lock screen orientation:", error);
+            });
+        }
+
         const splashScreen = document.getElementById('splash-screen');
         if (splashScreen) {
             splashScreen.classList.add('fade-out');
@@ -583,13 +591,27 @@ const App: React.FC = () => {
                 {showHelp && <HelpModal onClose={withSound(() => setShowHelp(false))} />}
                 
                 {showCopyrightModal && (
-                     <Modal title="Copyright Policy" onClose={withSound(() => setShowCopyrightModal(false))}>
-                        <div className="text-center space-y-4">
-                            <p className="text-gray-300 text-lg">© 2025 Maze Magic. All rights reserved.</p>
-                            <p className="text-gray-400 text-sm">
-                                The game, including its code, graphics, and sounds, is the property of the developer and protected by copyright laws.
+                     <Modal title="License & Attributions" onClose={withSound(() => setShowCopyrightModal(false))} className="max-w-md">
+                        <div className="text-left text-gray-300 space-y-4 text-sm">
+                            <p className="text-base font-bold text-white">© 2025 Onetechzilla (Ayush Garg). All rights reserved.</p>
+                            <p>
+                                This game was developed by Ayush Garg with creative assistance from Google's generative AI tools.
                             </p>
-                            <button onClick={withSound(() => setShowCopyrightModal(false))} className="w-full bg-cyan-500 text-white font-bold py-3 rounded-lg button-glow button-glow-cyan">OK</button>
+                            <div>
+                                <h4 className="font-bold text-cyan-400 mb-2">Third-Party Assets</h4>
+                                <p>
+                                    Certain assets used in this game are sourced from third-party creators and are used under their respective licenses. We are grateful for their contributions.
+                                </p>
+                                <ul className="list-disc list-inside mt-2 space-y-1 pl-2 text-gray-400">
+                                    <li>
+                                        <strong>Sound Effects:</strong> Sourced from Pixabay and other royalty-free platforms.
+                                    </li>
+                                    <li>
+                                        <strong>Graphics & Icons:</strong> Created using generative AI or sourced from royalty-free asset libraries.
+                                    </li>
+                                </ul>
+                            </div>
+                            <button onClick={withSound(() => setShowCopyrightModal(false))} className="w-full mt-4 bg-cyan-500 text-white font-bold py-3 rounded-lg button-glow button-glow-cyan">OK</button>
                         </div>
                     </Modal>
                 )}
@@ -1036,7 +1058,7 @@ const MainMenu: React.FC<{
                 <div className="flex justify-center items-center flex-wrap gap-x-3 gap-y-1">
                     <button onClick={onShowPrivacy} className="hover:text-gray-300 transition-colors">Privacy Policy</button>
                     <span className="text-gray-600" aria-hidden="true">|</span>
-                    <button onClick={onShowCopyright} className="hover:text-gray-300 transition-colors">Copyright Policy</button>
+                    <button onClick={onShowCopyright} className="hover:text-gray-300 transition-colors">License & Attributions</button>
                     <span className="text-gray-600" aria-hidden="true">|</span>
                     <button onClick={onShowAbout} className="hover:text-gray-300 transition-colors">About Me</button>
                 </div>
